@@ -24,21 +24,23 @@ public class TaskService {
     private final RequestBuilder requestBuilder;
 
     public void sendCreateTaskRequest(String token, TaskRequest taskRequest) throws IOException {
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        try (httpclient; CloseableHttpResponse response =
-                requestBuilder.postCreatingHttpResponse
-                        (httpclient, taskRequest, "/task/create", token)) {
+        try (CloseableHttpClient httpclient = HttpClients.createDefault();
+                CloseableHttpResponse response = requestBuilder.postCreatingHttpResponse(
+                        httpclient,
+                        taskRequest,
+                        "/task/create",
+                        token)) {
             EntityUtils.consume(response.getEntity());
         }
     }
 
     public String sendShowTasksRequest(JwtResponse jwtResponse) throws IOException {
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        try (httpclient; CloseableHttpResponse response =
-                requestBuilder.getCreatingHttpResponse(httpclient, "/task/list",
+        try (CloseableHttpClient httpclient = HttpClients.createDefault();
+                CloseableHttpResponse response = requestBuilder.getCreatingHttpResponse(
+                        httpclient,
+                        "/task/list",
                         jwtResponse.getAccessToken())) {
-            return new BufferedReader(new InputStreamReader
-                    (response.getEntity().getContent()))
+            return new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
                     .lines()
                     .collect(Collectors.joining());
         }
@@ -46,9 +48,12 @@ public class TaskService {
 
     public String tasksFromJsonString(String jsonString) {
         JSONArray jsonArray = new JSONArray(jsonString);
-        List<String> tasks = IntStream.range(0, jsonArray.length())
-                .mapToObj(i -> jsonArray.getJSONObject(i).getString("data")).toList();
-        return IntStream.range(0, tasks.size())
+        List<String> tasks = IntStream
+                .range(0, jsonArray.length())
+                .mapToObj(i -> jsonArray.getJSONObject(i).getString("data"))
+                .toList();
+        return IntStream
+                .range(0, tasks.size())
                 .mapToObj(i -> (i + 1) + ". " + tasks.get(i) + "\n")
                 .collect(Collectors.joining());
     }

@@ -30,8 +30,5 @@ public class RedisConfig {
         template.setEnableTransactionSupport(true);
         template.afterPropertiesSet();
         return template;
-
-
-
     }
 }

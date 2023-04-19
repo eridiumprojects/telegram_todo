@@ -5,7 +5,7 @@ public enum LoginState {
     ASK_PASSWORD(2),
     LOGIN_PROCESSING(3),
     AFK(4);
-    private int state;
+    private final int state;
 
     LoginState(int state) {
         this.state = state;

@@ -23,19 +23,22 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 public class AuthService {
-    private int statusCode;
     private final RequestBuilder requestBuilder;
+    private final ObjectMapper objectMapper;
+    private int statusCode;
 
     public JwtResponse jwtFromJsonString(String jsonString) throws JsonProcessingException {
-        return new ObjectMapper().
-                readValue(jsonString, JwtResponse.class);
+        return objectMapper.readValue(jsonString, JwtResponse.class);
     }
 
     public String sendSignInRequest(LoginRequest user) throws IOException {
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        try (httpclient; CloseableHttpResponse response =
-                requestBuilder.postCreatingHttpResponse
-                        (httpclient, user, "/auth/signin", null)) {
+        try (
+                CloseableHttpClient httpclient = HttpClients.createDefault();
+                CloseableHttpResponse response = requestBuilder.postCreatingHttpResponse(
+                        httpclient,
+                        user,
+                        "/auth/signin",
+                        null)) {
             setStatusCode(response.getStatusLine().getStatusCode());
             return new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
                     .lines()

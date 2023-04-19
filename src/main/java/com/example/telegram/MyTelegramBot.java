@@ -11,9 +11,6 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Component
 public class MyTelegramBot extends TelegramLongPollingBot {
 
@@ -26,21 +23,21 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     @Value("${tg.bot.token}")
     private String token;
 
-    @Value("${tg.bot.name")
+    @Value("${tg.bot.name}")
     private String username;
 
 //    Map<Long, BotState> map = new HashMap<>();
 
-
-    public MyTelegramBot(TaskService taskService, AuthService authService) {
+    public MyTelegramBot(TaskService taskService,
+                         AuthService authService,
+                         BotService botService) {
         this.taskService = taskService;
         this.authService = authService;
         this.loginUser = new LoginRequest();
-        botService = new BotService(this);
+        this.botService = botService;
         botService.initCommands();
         botState = BotState.AFK;
     }
-
 
     //TODO разобраться с командой signout, пофиксить баги
     //TODO прикрепить редис и автоматическую авторизацию
@@ -48,6 +45,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         long messageChatId = update.getMessage().getChatId();
         String messageText = update.getMessage().getText();
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             if (messageText.equals(ECommand.START.getCommand())) {
                 botState = BotState.MENU;

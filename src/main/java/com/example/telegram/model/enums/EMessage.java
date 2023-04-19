@@ -8,7 +8,8 @@ public enum EMessage {
     INVALID_COMMAND_MESSAGE("Неверная команда!"),
     INVALID_DATA_MESSAGE("Неверные имя пользователя или пароль. Повторите попытку!"),
     SUCCESSFULLY_LOGGED_MESSAGE("Вы успешно вошли в аккаунт!"),
-    IN_ACCOUNT_FIRST_MESSAGE("Приступим к планированию!\n" +
+    IN_ACCOUNT_FIRST_MESSAGE(
+            "Приступим к планированию!\n" +
             "Вы можете создать новый таск с помощью команды "),
     IN_ACCOUNT_SECOND_MESSAGE("\nТакже вы можете посмотреть список всех тасков с помощью команды "),
     IN_ACCOUNT_THIRD_MESSAGE("\nИли выйти из аккаунта с помощью "),
@@ -18,7 +19,7 @@ public enum EMessage {
     TASK_CREATED_MESSAGE("Задание успешно создано!"),
     EMPTY_LIST_MESSAGE("Ваш список заданий пуст"),
     SIGNOUT_MESSAGE("Вы успешно вышли из аккаунта!");
-    private String message;
+    private final String message;
 
 
     EMessage(String message) {

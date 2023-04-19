@@ -7,7 +7,6 @@ import com.example.telegram.model.enums.BotState;
 import com.example.telegram.model.enums.ECommand;
 import com.example.telegram.model.enums.EMessage;
 import com.example.telegram.model.enums.LoginState;
-import com.example.telegram.util.RequestBuilder;
 import lombok.*;
 import org.apache.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -40,19 +39,20 @@ public class BotService {
     Jedis jedis = new Jedis("localhost",6379);
 
 
-    public BotService(TelegramLongPollingBot bot) {
+    public BotService(TelegramLongPollingBot bot,
+                      AuthService authService,
+                      TaskService taskService) {
         this.bot = bot;
         currentState = LoginState.ASK_USERNAME;
         this.loginUser = new LoginRequest();
-        this.authService = new AuthService(new RequestBuilder());
-        this.taskService = new TaskService(new RequestBuilder());
+        this.authService = authService;
+        this.taskService = taskService;
         jedis.connect();
     }
 
     public void handleMenuState(long messageChatId) {
-        sendMessage(messageChatId
-                , EMessage.LOGIN_IN_ACCOUNT_WITH_MESSAGE.getMessage()
-                        + ECommand.LOGIN.getCommand());
+        sendMessage(messageChatId,
+                EMessage.LOGIN_IN_ACCOUNT_WITH_MESSAGE.getMessage() + ECommand.LOGIN.getCommand());
         botState = BotState.LOGIN;
     }
 
@@ -103,14 +103,17 @@ public class BotService {
                 botState = BotState.IN_ACCOUNT;
             }
         } catch (IOException e) {
+            //TODO: send dev id with asking to call him, unexpected error
             throw new RuntimeException(e);
         }
     }
 
     public void handleInAccountState(long messageChatId, String messageText) {
+        //TODO: move EMessage to basic class
         if (messageText.equals(ECommand.RUN.getCommand())
                 || messageText.equals(ECommand.RETURN.getCommand())) {
-            sendMessage(messageChatId, EMessage.IN_ACCOUNT_FIRST_MESSAGE.getMessage() +
+            sendMessage(messageChatId,
+                    EMessage.IN_ACCOUNT_FIRST_MESSAGE.getMessage() +
                     ECommand.CREATE.getCommand() +
                     EMessage.IN_ACCOUNT_SECOND_MESSAGE.getMessage() +
                     ECommand.SHOW.getCommand() +
@@ -129,7 +132,7 @@ public class BotService {
         } else if (messageText.equals(ECommand.SHOW.getCommand())) {
             botState = BotState.SHOW;
             try {
-                JwtResponse jwtResponse = (JwtResponse) authService.jwtFromJsonString(authService.sendSignInRequest(loginUser));
+                JwtResponse jwtResponse = authService.jwtFromJsonString(authService.sendSignInRequest(loginUser));
                 String tasks = taskService.sendShowTasksRequest(jwtResponse);
                 if (tasks.equals("[]")) {
                     sendMessage(messageChatId, EMessage.EMPTY_LIST_MESSAGE.getMessage());
@@ -139,6 +142,7 @@ public class BotService {
                 sendMessage(messageChatId, EMessage.RETURN_MESSAGE.getMessage() + ECommand.RETURN.getCommand());
                 botState = BotState.IN_ACCOUNT;
             } catch (IOException e) {
+                //TODO: the same problem
                 throw new RuntimeException(e);
             }
         } else if (messageText.equals(ECommand.SIGNOUT.getCommand())) {
@@ -152,9 +156,10 @@ public class BotService {
         TaskRequest taskRequest = new TaskRequest();
         taskRequest.setData(messageText);
         try {
-            JwtResponse jwtResponse = (JwtResponse) authService.jwtFromJsonString(authService.sendSignInRequest(loginUser));
+            JwtResponse jwtResponse = authService.jwtFromJsonString(authService.sendSignInRequest(loginUser));
             taskService.sendCreateTaskRequest(jwtResponse.getAccessToken(), taskRequest);
         } catch (IOException e) {
+            //TODO: the same problem
             throw new RuntimeException(e);
         }
         sendMessage(messageChatId, EMessage.TASK_CREATED_MESSAGE.getMessage());
@@ -164,12 +169,16 @@ public class BotService {
 
     public void initCommands() {
         List<BotCommand> listOfCommands = new ArrayList<>();
-        listOfCommands.add(new BotCommand(ECommand.START.getCommand(),
+        listOfCommands.add(new BotCommand(
+                ECommand.START.getCommand(),
                 EMessage.INFO_START_MESSAGE.getMessage()));
         try {
-            bot.execute(new SetMyCommands(listOfCommands,
-                    new BotCommandScopeDefault(), null));
+            bot.execute(new SetMyCommands(
+                    listOfCommands,
+                    new BotCommandScopeDefault(),
+                    null));
         } catch (TelegramApiException E) {
+            //TODO: the same problem
             E.printStackTrace();
         }
     }
@@ -182,6 +191,7 @@ public class BotService {
         try {
             bot.execute(message);
         } catch (TelegramApiException e) {
+            //TODO: the same problem
             throw new RuntimeException(e);
         }
     }
