@@ -39,6 +39,8 @@ public class BotService {
     private TelegramLongPollingBot bot;
     public LoginRequest loginUser;
     private final RedissonClient redissonClient;
+    private JwtResponse jwtResponse;
+    public RMapCache<Long, String> map;
 
 
     public BotService(TelegramLongPollingBot bot, RedissonClient redissonClient) {
@@ -90,31 +92,26 @@ public class BotService {
     public void processLoginProcessing(long messageChatId, String messageText) {
         RMapCache<Long, String> map = redissonClient.getMapCache("myCache");
         loginUser.setPassword(messageText);
-        try {
-            authService.sendSignInRequest(loginUser);
-            if (authService.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-                log.info("unauthorized");
-                sendMessage(messageChatId, MessagePull.INVALID_DATA_MESSAGE);
-                botState = BotState.MENU;
-                currentState = LoginState.ASK_USERNAME;
-            }
-            if (authService.getStatusCode() == HttpStatus.SC_OK) {
-                log.info("in account state with credentials" + loginUser.getUsername() + loginUser.getUsername());
-                log.info("calling jwtResponse");
-                JwtResponse jwtResponse = authService.jwtFromJsonString(authService.sendSignInRequest(loginUser));
-                log.info("jwt is received");
-                map.put(messageChatId, jwtResponse.getAccessToken());
-                log.info("put data in map");
-                sendMessage(messageChatId, MessagePull.SUCCESSFULLY_LOGGED_MESSAGE);
-                sendMessage(messageChatId, MessagePull.NEXT_ACTS_MESSAGE +
-                        ECommand.RUN.getCommand());
-                botState = BotState.IN_ACCOUNT;
-                currentState = LoginState.ASK_USERNAME;
-                log.info("map info" + map.get(messageChatId));
-            }
-        } catch (IOException e) {
-            //TODO send dev id with asking to call him, unexpected error
-            throw new RuntimeException(e);
+        jwtResponse = authService.sendSignInRequest(loginUser);
+        log.info(authService.getStatusCode());
+        if (authService.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+            log.info("unauthorized");
+            sendMessage(messageChatId, MessagePull.INVALID_DATA_MESSAGE);
+            botState = BotState.MENU;
+            currentState = LoginState.ASK_USERNAME;
+        }
+        if (authService.getStatusCode() == HttpStatus.SC_OK) {
+            log.info("in account state with credentials" + loginUser.getUsername() + loginUser.getUsername());
+            log.info("calling jwtResponse");
+            log.info("jwt is received");
+            map.put(messageChatId, jwtResponse.getAccessToken());
+            log.info("put data in map");
+            sendMessage(messageChatId, MessagePull.SUCCESSFULLY_LOGGED_MESSAGE);
+            sendMessage(messageChatId, MessagePull.NEXT_ACTS_MESSAGE +
+                    ECommand.RUN.getCommand());
+            botState = BotState.IN_ACCOUNT;
+            currentState = LoginState.ASK_USERNAME;
+            log.info("map info" + map.get(messageChatId));
         }
     }
 
@@ -138,15 +135,9 @@ public class BotService {
         String token = "";
         RMapCache<Long, String> map = redissonClient.getMapCache("myCache");
         if (map.containsKey(messageChatId)) {
-//            System.out.println(map.get(messageChatId));
             token = map.get(messageChatId);
         } else {
-            try {
-                token = authService.jwtFromJsonString(authService.sendSignInRequest(loginUser)).getAccessToken();
-            } catch (IOException e) {
-                //TODO the same problem
-                throw new RuntimeException(e);
-            }
+            token = jwtResponse.getAccessToken();
         }
         if (messageText.equals(ECommand.CREATE.getCommand())) {
             botState = BotState.CREATE;
@@ -178,14 +169,9 @@ public class BotService {
         String token = "";
         RMapCache<Long, String> map = redissonClient.getMapCache("myCache");
         if (map.containsKey(messageChatId)) {
-//            System.out.println(map.get(messageChatId));
             token = map.get(messageChatId);
         } else {
-            try {
-                token = authService.jwtFromJsonString(authService.sendSignInRequest(loginUser)).getAccessToken();
-            } catch (IOException e) {
-                throw new RuntimeException();
-            }
+            token = jwtResponse.getAccessToken();
         }
         try {
             taskService.sendCreateTaskRequest(token, taskRequest);
