@@ -9,7 +9,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -19,9 +18,9 @@ import java.nio.charset.StandardCharsets;
 @Component
 @RequiredArgsConstructor
 public class RequestBuilder {
-    @Value("${tg.bot.url}")
-    private String URL;
+    private String URL = "http://localhost:8080/api";
     private final ObjectMapper objectMapper;
+
     public CloseableHttpResponse postCreatingHttpResponse(
             CloseableHttpClient client,
             Object object,

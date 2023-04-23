@@ -25,21 +25,21 @@ public class TaskService {
 
     public void sendCreateTaskRequest(String token, TaskRequest taskRequest) throws IOException {
         try (CloseableHttpClient httpclient = HttpClients.createDefault();
-                CloseableHttpResponse response = requestBuilder.postCreatingHttpResponse(
-                        httpclient,
-                        taskRequest,
-                        "/task/create",
-                        token)) {
+             CloseableHttpResponse response = requestBuilder.postCreatingHttpResponse(
+                     httpclient,
+                     taskRequest,
+                     "/task/create",
+                     token)) {
             EntityUtils.consume(response.getEntity());
         }
     }
 
-    public String sendShowTasksRequest(JwtResponse jwtResponse) throws IOException {
+    public String sendShowTasksRequest(String token) throws IOException {
         try (CloseableHttpClient httpclient = HttpClients.createDefault();
-                CloseableHttpResponse response = requestBuilder.getCreatingHttpResponse(
-                        httpclient,
-                        "/task/list",
-                        jwtResponse.getAccessToken())) {
+             CloseableHttpResponse response = requestBuilder.getCreatingHttpResponse(
+                     httpclient,
+                     "/task/list",
+                     token)) {
             return new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
                     .lines()
                     .collect(Collectors.joining());

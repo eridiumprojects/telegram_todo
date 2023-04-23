@@ -6,6 +6,7 @@ import com.example.telegram.model.enums.ECommand;
 import com.example.telegram.service.AuthService;
 import com.example.telegram.service.BotService;
 import com.example.telegram.service.TaskService;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -19,25 +20,23 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     public final AuthService authService;
     private final BotService botService;
     public LoginRequest loginUser;
-
     @Value("${tg.bot.token}")
     private String token;
 
-    @Value("${tg.bot.name}")
+    @Value("${tg.bot.name")
     private String username;
+    private final RedissonClient redissonClient;
 
-//    Map<Long, BotState> map = new HashMap<>();
-
-    public MyTelegramBot(TaskService taskService,
-                         AuthService authService,
-                         BotService botService) {
+    public MyTelegramBot(TaskService taskService, AuthService authService, RedissonClient redissonClient) {
         this.taskService = taskService;
         this.authService = authService;
+        this.redissonClient = redissonClient;
         this.loginUser = new LoginRequest();
-        this.botService = botService;
+        botService = new BotService(this, this.redissonClient);
         botService.initCommands();
         botState = BotState.AFK;
     }
+
 
     //TODO разобраться с командой signout, пофиксить баги
     //TODO прикрепить редис и автоматическую авторизацию
@@ -45,7 +44,6 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         long messageChatId = update.getMessage().getChatId();
         String messageText = update.getMessage().getText();
-
         if (update.hasMessage() && update.getMessage().hasText()) {
             if (messageText.equals(ECommand.START.getCommand())) {
                 botState = BotState.MENU;
