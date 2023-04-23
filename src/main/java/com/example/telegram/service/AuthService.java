@@ -13,7 +13,10 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.json.JSONArray;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,22 +42,48 @@ public class AuthService {
         return objectMapper.readValue(jsonString, JwtResponse.class);
     }
 
+//    public String sendSignInRequest(LoginRequest user) throws IOException {
+//        log.info("method sendSignInRequest started");
+//        try (
+//                CloseableHttpClient httpclient = HttpClients.createDefault();
+//                CloseableHttpResponse response = requestBuilder.postCreatingHttpResponse(
+//                        httpclient,
+//                        user,
+//                        "/auth/signin",
+//                        null)) {
+//            setStatusCode(response.getStatusLine().getStatusCode());
+//            log.info("method sendSignInRequest finished");
+//            return new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
+//                    .lines()
+//                    .collect(Collectors.joining());
+//        }
+//    }
+
     public String sendSignInRequest(LoginRequest user) throws IOException {
         log.info("method sendSignInRequest started");
-        try (
-                CloseableHttpClient httpclient = HttpClients.createDefault();
-                CloseableHttpResponse response = requestBuilder.postCreatingHttpResponse(
-                        httpclient,
-                        user,
-                        "/auth/signin",
-                        null)) {
-            setStatusCode(response.getStatusLine().getStatusCode());
-            log.info("method sendSignInRequest finished");
-            return new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
-                    .lines()
-                    .collect(Collectors.joining());
-        }
+
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<LoginRequest> requestEntity = new HttpEntity<>(user, headers);
+
+        ResponseEntity<String> responseEntity = restTemplate.exchange(
+                 "http://localhost:8080/api/auth/signin",
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+        );
+
+        setStatusCode(responseEntity.getStatusCodeValue());
+
+        log.info("method sendSignInRequest finished");
+
+        return responseEntity.getBody();
     }
+
+
 
 //    public String sendCurrentUserRequest(String token) throws IOException {
 //        try (CloseableHttpClient httpclient = HttpClients.createDefault();
