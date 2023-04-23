@@ -9,21 +9,12 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.json.JSONArray;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -59,7 +50,7 @@ public class AuthService {
 //        }
 //    }
 
-    public String sendSignInRequest(LoginRequest user) throws IOException {
+    public JwtResponse sendSignInRequest(LoginRequest user) throws IOException {
         log.info("method sendSignInRequest started");
 
         RestTemplate restTemplate = new RestTemplate();
@@ -69,13 +60,19 @@ public class AuthService {
 
         HttpEntity<LoginRequest> requestEntity = new HttpEntity<>(user, headers);
 
-        ResponseEntity<String> responseEntity = restTemplate.exchange(
-                 "http://localhost:8080/api/auth/signin",
-                HttpMethod.POST,
-                requestEntity,
-                String.class
-        );
-
+        ResponseEntity<JwtResponse> responseEntity;
+        try {
+            responseEntity = restTemplate.exchange(
+                    "http://localhost:8080/api/auth/signin",
+                    HttpMethod.POST,
+                    requestEntity,
+                    JwtResponse.class
+            );
+            setStatusCode(responseEntity.getStatusCode());
+        } catch (RestClientException e) {
+            //it will be caused if response entity returns with not 200 HttpStatus
+        }
+        //don't use deprecated methods
         setStatusCode(responseEntity.getStatusCodeValue());
 
         log.info("method sendSignInRequest finished");
