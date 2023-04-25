@@ -11,7 +11,6 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 @Component
 public class TelegramBotConfig {
-
     @Autowired
     MyTelegramBot bot;
     @EventListener({ContextRefreshedEvent.class})

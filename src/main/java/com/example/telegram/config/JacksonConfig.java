@@ -7,7 +7,6 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 @Configuration
 public class JacksonConfig {
-
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();

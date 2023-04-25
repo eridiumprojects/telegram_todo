@@ -18,4 +18,6 @@ public class MessagePull {
     public static final String TASK_CREATED_MESSAGE = "Задание успешно создано!";
     public static final String EMPTY_LIST_MESSAGE = "Ваш список заданий пуст";
     public static final String SIGNOUT_MESSAGE = "Вы успешно вышли из аккаунта!";
+    public static final String ALREADY_LOGGED = "Вы уже авторизованы в аккаунт";
+    public static final String SESSION_EXPIRED = "Сессия с текущим пользователем истекла, авторизуйтесь заново!";
 }

@@ -1,14 +1,16 @@
 package com.example.telegram.service;
 
 import com.example.telegram.model.dto.request.TaskRequest;
-import com.example.telegram.model.dto.response.JwtResponse;
 import com.example.telegram.util.RequestBuilder;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -20,7 +22,10 @@ import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
+@Getter
+@Setter
 public class TaskService {
+    private int statusCode;
     private final RequestBuilder requestBuilder;
 
     public void sendCreateTaskRequest(String token, TaskRequest taskRequest) throws IOException {
@@ -30,6 +35,7 @@ public class TaskService {
                      taskRequest,
                      "/task/create",
                      token)) {
+            setStatusCode(response.getStatusLine().getStatusCode());
             EntityUtils.consume(response.getEntity());
         }
     }
@@ -40,6 +46,7 @@ public class TaskService {
                      httpclient,
                      "/task/list",
                      token)) {
+            setStatusCode(response.getStatusLine().getStatusCode());
             return new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
                     .lines()
                     .collect(Collectors.joining());

@@ -37,9 +37,6 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         botState = BotState.AFK;
     }
 
-
-    //TODO разобраться с командой signout, пофиксить баги
-    //TODO прикрепить редис и автоматическую авторизацию
     @Override
     public void onUpdateReceived(Update update) {
         long messageChatId = update.getMessage().getChatId();

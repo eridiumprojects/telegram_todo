@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 public class TaskRequest implements Serializable {
     @JsonIgnore
     private Long id;
-    @NotEmpty
     private String data;
     @JsonIgnore
     private LocalDateTime deadline;

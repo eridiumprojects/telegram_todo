@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RedissonConfig {
-
     private static String redisUrl(String host, String port) {
         return "redis://%s:%s".formatted(host, port);
     }
