@@ -154,7 +154,7 @@ public class BotService {
                 String tasks = taskService.sendShowTasksRequest(token);
                 if (taskService.getStatusCode() != HttpStatus.SC_OK) {
                     RefreshResponse refreshResponse = processingRefreshTokens(refreshToken);
-                    if (checkRefreshState(authService.getStatusCode())) {
+                    if (checkRefreshState(taskService.getStatusCode())) {
                         sendMessage(messageChatId, MessagePull.SESSION_EXPIRED);
                         botState = BotState.MENU;
                         currentState = LoginState.ASK_USERNAME;
@@ -207,7 +207,7 @@ public class BotService {
             taskService.sendCreateTaskRequest(token, taskRequest);
             if (taskService.getStatusCode() != HttpStatus.SC_OK) {
                 RefreshResponse refreshResponse = processingRefreshTokens(refreshToken);
-                if (checkRefreshState(authService.getStatusCode())) {
+                if (checkRefreshState(taskService.getStatusCode())) {
                     //убрать дублирование
                     sendMessage(messageChatId, MessagePull.SESSION_EXPIRED);
                     botState = BotState.MENU;
@@ -240,7 +240,7 @@ public class BotService {
     }
 
     private boolean checkRefreshState(int statusCode) {
-        return statusCode != HttpStatus.SC_UNAUTHORIZED;
+        return statusCode == HttpStatus.SC_UNAUTHORIZED;
     }
 
     public void initCommands() {

@@ -53,9 +53,6 @@ public class AuthService {
         refreshRequest.setRefreshToken(refreshToken);
         try {
             RestTemplate restTemplate = new RestTemplate();
-            log.info("headers going on");
-            log.info("refreshToken" + refreshToken);
-            log.info("refreshRequest" + refreshRequest);
 
             ResponseEntity<RefreshResponse> responseEntity = restTemplate.exchange(
                     "http://localhost:8080/api/auth/refresh",
@@ -70,7 +67,7 @@ public class AuthService {
             return responseEntity.getBody();
         } catch (RestClientException e) {
             setStatusCode(HttpStatus.UNAUTHORIZED.value());
-            log.error("Tokens has not been refreshed, bad credentials");
+            log.warn("Refresh token has been expired");
             return null;
         }
 
