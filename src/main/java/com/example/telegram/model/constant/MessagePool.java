@@ -19,5 +19,4 @@ public class MessagePool {
     public static final String SIGNOUT_MESSAGE = "Вы успешно вышли из аккаунта!";
     public static final String ALREADY_LOGGED = "Вы уже авторизованы в аккаунт";
     public static final String SESSION_EXPIRED = "Сессия с текущим пользователем истекла, авторизуйтесь заново!";
-    public static final String BOT_IS_AWAIT_FOR_AUTH = "Бот в ожидании авторизации или любой другой команды";
 }

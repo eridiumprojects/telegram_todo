@@ -181,12 +181,13 @@ public class BotService {
 
     private void handleSignoutState(long messageChatId) {
         sendMessage(messageChatId, MessagePool.SIGNOUT_MESSAGE);
-        sendMessage(messageChatId, MessagePool.BOT_IS_AWAIT_FOR_AUTH);
 
         map.remove(messageChatId);
         refresh.remove(messageChatId);
 
         botState = BotState.MENU;
+
+        handleMenuState(messageChatId);
 
         log.info("User logged out of the account");
         log.info("Access map deleted the user id and token successfully");
