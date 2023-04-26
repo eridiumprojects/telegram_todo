@@ -113,6 +113,9 @@ public class BotService {
             sendMessage(messageChatId, MessagePool.INVALID_DATA_MESSAGE);
             botState = BotState.MENU;
             currentState = LoginState.ASK_USERNAME;
+
+            handleMenuState(messageChatId);
+
             log.warn("User has bad credentials");
         }
 
@@ -133,7 +136,7 @@ public class BotService {
     }
 
     public void handleInAccountState(long messageChatId, String messageText) {
-        if (messageText.equals(ECommand.RUN.getCommand()) || messageText.equals(ECommand.RETURN.getCommand())) {
+        if (messageText.equals(ECommand.RUN.getCommand())) {
             sendMessage(messageChatId,
                     MessagePool.IN_ACCOUNT_FIRST_MESSAGE +
                             ECommand.CREATE.getCommand() + "\n" +
@@ -160,15 +163,20 @@ public class BotService {
         if (messageText.equals(ECommand.CREATE.getCommand())) {
             botState = BotState.CREATE;
             sendMessage(messageChatId, MessagePool.INPUT_TASK_DATA_MESSAGE);
+            return;
         }
 
         if (messageText.equals(ECommand.SHOW.getCommand())) {
             handleShowState(messageChatId, token, refreshToken);
+            return;
         }
 
         if (messageText.equals(ECommand.SIGNOUT.getCommand())) {
             handleSignoutState(messageChatId);
+            return;
         }
+
+        sendMessage(messageChatId,MessagePool.INVALID_COMMAND_MESSAGE);
     }
 
     private void handleSignoutState(long messageChatId) {

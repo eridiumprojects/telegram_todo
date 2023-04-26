@@ -7,7 +7,6 @@ public enum ECommand {
     RUN("/run"),
     CREATE("/create"),
     SHOW("/show"),
-    RETURN("/return"),
     START("/start"),
     SIGNOUT("/signout");
 
