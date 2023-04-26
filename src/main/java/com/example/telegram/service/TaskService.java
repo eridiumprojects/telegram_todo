@@ -10,7 +10,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -28,29 +27,27 @@ public class TaskService {
     private int statusCode;
     private final RequestBuilder requestBuilder;
 
-    public void sendCreateTaskRequest(String token, TaskRequest taskRequest) throws IOException {
+    public String sendRequestToTaskService(String token, TaskRequest taskRequest, boolean option) throws IOException {
+        String path = option ? "/task/create" : "/task/list";
+
         try (CloseableHttpClient httpclient = HttpClients.createDefault();
-             CloseableHttpResponse response = requestBuilder.postCreatingHttpResponse(
+             CloseableHttpResponse response = requestBuilder.createResponse(
                      httpclient,
                      taskRequest,
-                     "/task/create",
-                     token)) {
-            setStatusCode(response.getStatusLine().getStatusCode());
-            EntityUtils.consume(response.getEntity());
-        }
-    }
+                     path,
+                     token,
+                     option)) {
 
-    public String sendShowTasksRequest(String token) throws IOException {
-        try (CloseableHttpClient httpclient = HttpClients.createDefault();
-             CloseableHttpResponse response = requestBuilder.getCreatingHttpResponse(
-                     httpclient,
-                     "/task/list",
-                     token)) {
             setStatusCode(response.getStatusLine().getStatusCode());
+            if (option) {
+                EntityUtils.consume(response.getEntity());
+                return null;
+            }
             return new BufferedReader(new InputStreamReader(response.getEntity().getContent()))
                     .lines()
                     .collect(Collectors.joining());
         }
+
     }
 
     public String tasksFromJsonString(String jsonString) {

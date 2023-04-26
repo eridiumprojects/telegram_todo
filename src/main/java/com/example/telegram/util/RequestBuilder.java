@@ -21,32 +21,31 @@ public class RequestBuilder {
     private String URL = "http://localhost:8080/api";
     private final ObjectMapper objectMapper;
 
-    public CloseableHttpResponse postCreatingHttpResponse(
+    public CloseableHttpResponse createResponse(
             CloseableHttpClient client,
             Object object,
             String path,
-            String token) throws IOException {
+            String token,
+            boolean option) throws IOException {
 
         Charset charset = StandardCharsets.UTF_8;
         ContentType contentType = ContentType.create("application/json", charset);
 
-        HttpPost httpPost = new HttpPost(URL + path);
-        String json = objectMapper.writeValueAsString(object);
-        StringEntity entity = new StringEntity(json, contentType);
-        entity.setContentType("application/json");
-        httpPost.setEntity(entity);
+        if (option) {
+            HttpPost httpPost = new HttpPost(URL + path);
 
-        if (token != null) {
-            httpPost.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+            String json = objectMapper.writeValueAsString(object);
+
+            StringEntity entity = new StringEntity(json, contentType);
+            entity.setContentType("application/json");
+
+            httpPost.setEntity(entity);
+
+            if (token != null) {
+                httpPost.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+            }
+            return client.execute(httpPost);
         }
-
-        return client.execute(httpPost);
-    }
-
-    public CloseableHttpResponse getCreatingHttpResponse(
-            CloseableHttpClient client,
-            String path,
-            String token) throws IOException {
 
         HttpGet httpGet = new HttpGet(URL + path);
         httpGet.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);

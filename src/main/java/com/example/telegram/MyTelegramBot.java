@@ -32,6 +32,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         this.authService = authService;
         this.redissonClient = redissonClient;
         this.loginUser = new LoginRequest();
+
         botService = new BotService(this, this.redissonClient);
         botService.initCommands();
         botState = BotState.AFK;
@@ -41,10 +42,12 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         long messageChatId = update.getMessage().getChatId();
         String messageText = update.getMessage().getText();
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             if (messageText.equals(ECommand.START.getCommand())) {
                 botState = BotState.MENU;
             }
+
             switch (botState) {
                 case MENU -> botService.handleMenuState(messageChatId);
                 case LOGIN -> botService.handleLoginState(messageChatId, messageText);
@@ -52,6 +55,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
                 case NEXT -> botService.handleNextState(messageChatId, messageText);
                 case CREATE -> botService.handleCreateState(messageChatId, messageText);
             }
+
             botState = botService.getBotState();
         }
     }

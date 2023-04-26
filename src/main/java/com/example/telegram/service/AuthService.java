@@ -22,8 +22,10 @@ import org.springframework.web.client.RestTemplate;
 public class AuthService {
     private int statusCode;
     private final RequestBuilder requestBuilder;
+    private static final String REFRESH_URL = "http://localhost:8080/api/auth/refresh";
+    private static final String AUTH_URL = "http://localhost:8080/api/auth/signin";
 
-    public JwtResponse sendSignInRequest(LoginRequest user) {
+    public JwtResponse sendRequestToAuthService(LoginRequest user) {
         try {
 
             RestTemplate restTemplate = new RestTemplate();
@@ -34,14 +36,16 @@ public class AuthService {
             HttpEntity<LoginRequest> requestEntity = new HttpEntity<>(user, headers);
 
             ResponseEntity<JwtResponse> responseEntity = restTemplate.exchange(
-                    "http://localhost:8080/api/auth/signin",
+                    AUTH_URL,
                     HttpMethod.POST,
                     requestEntity,
                     JwtResponse.class
             );
+
             setStatusCode(responseEntity.getStatusCode().value());
 
             return responseEntity.getBody();
+
         } catch (RestClientException e) {
             setStatusCode(HttpStatus.UNAUTHORIZED.value());
             return null;
@@ -51,20 +55,24 @@ public class AuthService {
     public RefreshResponse refreshToken(String refreshToken) {
         RefreshRequest refreshRequest = new RefreshRequest();
         refreshRequest.setRefreshToken(refreshToken);
+
         try {
             RestTemplate restTemplate = new RestTemplate();
 
             ResponseEntity<RefreshResponse> responseEntity = restTemplate.exchange(
-                    "http://localhost:8080/api/auth/refresh",
+                    REFRESH_URL,
                     HttpMethod.POST,
                     new HttpEntity<>(
                             refreshRequest
                     ),
                     RefreshResponse.class
             );
+
             log.info("Access and refresh token has been updated");
+
             setStatusCode(responseEntity.getStatusCode().value());
             return responseEntity.getBody();
+
         } catch (RestClientException e) {
             setStatusCode(HttpStatus.UNAUTHORIZED.value());
             log.warn("Refresh token has been expired");
@@ -73,6 +81,3 @@ public class AuthService {
 
     }
 }
-
-
-
