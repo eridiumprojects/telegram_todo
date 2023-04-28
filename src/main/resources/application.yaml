@@ -15,6 +15,10 @@ storage:
   access-token: accessTokenStorage
   refresh-token: refreshTokenStorage
 
+security:
+  ttl:
+    access: 10m
+    refresh: 168h
 
 spring:
   data:

@@ -71,13 +71,13 @@ public class TaskService {
         var requestEntity = new HttpEntity<>(body, headers);
 
         try {
-            var result = restTemplate.exchange(
+            restTemplate.exchange(
                     "/task/create",
                     HttpMethod.POST,
                     requestEntity,
-                    new ParameterizedTypeReference<TaskInfo>() {}).getBody();
+                    new ParameterizedTypeReference<TaskInfo>() {});
 
-            return result != null;
+            return true;
         } catch (RestClientException e) {
             log.warn("User couldn't create task.");
             return false;

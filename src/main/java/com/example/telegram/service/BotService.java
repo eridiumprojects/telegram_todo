@@ -15,7 +15,9 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static com.example.telegram.model.constant.DefaultMessages.IN_ACCOUNT;
 import static com.example.telegram.model.constant.MessagePool.*;
@@ -32,6 +34,8 @@ public class BotService {
     public RMapCache<Long, String> refreshTokensMap;
     private RMap<Long, String> userStates;
     private RMap<Long, String> userNames;
+    private final Duration accessTokenTtl;
+    private final Duration refreshTokenTtl;
 
     public BotService(
             RedissonClient redissonClient,
@@ -40,8 +44,10 @@ public class BotService {
             @Value("${storage.user-name}") String userNameStorage,
             @Value("${storage.user-state}") String userStateStorage,
             @Value("${storage.access-token}") String accessTokenStorage,
-            @Value("${storage.refresh-token}") String refreshTokenStorage
-    ) {
+            @Value("${storage.refresh-token}") String refreshTokenStorage,
+            @Value("${security.ttl.access}") Duration accessTokenTtl,
+            @Value("${security.ttl.refresh}") Duration refreshTokenTtl
+            ) {
         this.redissonClient = redissonClient;
         this.authService = authService;
         this.taskService = taskService;
@@ -50,6 +56,9 @@ public class BotService {
         this.userNames = redissonClient.getMap(userNameStorage);
         this.accessTokensMap = redissonClient.getMapCache(accessTokenStorage);
         this.refreshTokensMap = redissonClient.getMapCache(refreshTokenStorage);
+
+        this.accessTokenTtl = accessTokenTtl;
+        this.refreshTokenTtl = refreshTokenTtl;
     }
 
     public String process(Long userId, String message) {
@@ -131,10 +140,28 @@ public class BotService {
 
     public BotChange handleStartState(long messageChatId) {
         if (accessTokensMap.containsKey(messageChatId)) {
-            log.info("User has been already login in account");
+            log.info("Valid access token exists");
             return new BotChange(
                     BotState.IN_ACCOUNT_BASE,
                     MessagePool.ALREADY_LOGGED + "\n\n" + MAIN_MENU);
+        } else if (refreshTokensMap.containsKey(messageChatId)) {
+            log.info("Valid refresh token exists");
+            var result = processingRefreshTokens(refreshTokensMap.get(messageChatId));
+            if (result != null) {
+                accessTokensMap.put(
+                        messageChatId,
+                        result.getAccessToken(),
+                        accessTokenTtl.toMinutes(),
+                        TimeUnit.MINUTES);
+                refreshTokensMap.put(
+                        messageChatId,
+                        result.getRefreshToken(),
+                        refreshTokenTtl.toMinutes(),
+                        TimeUnit.MINUTES);
+                return new BotChange(
+                        BotState.IN_ACCOUNT_BASE,
+                        MessagePool.ALREADY_LOGGED + "\n\n" + MAIN_MENU);
+            }
         }
 
         log.info("User is trying to login");
@@ -165,8 +192,17 @@ public class BotService {
                     MessagePool.INVALID_DATA_MESSAGE + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
         }
 
-        accessTokensMap.put(messageChatId, jwtResponse.getAccessToken());
-        refreshTokensMap.put(messageChatId, jwtResponse.getRefreshToken());
+        accessTokensMap.put(
+                messageChatId,
+                jwtResponse.getAccessToken(),
+                accessTokenTtl.toMinutes(),
+                TimeUnit.MINUTES);
+        refreshTokensMap.put(
+                messageChatId,
+                jwtResponse.getRefreshToken(),
+                refreshTokenTtl.toMinutes(),
+                TimeUnit.MINUTES);
+
         log.info("User logged into the account");
         log.info("Access map saved the user id and token successfully");
         log.info("Refresh map saved the user id and token successfully");
@@ -203,8 +239,16 @@ public class BotService {
                 return processingExpiredSession(messageChatId);
             }
             accessToken = refreshResponse.getAccessToken();
-            accessTokensMap.put(messageChatId, accessToken);
-            refreshTokensMap.put(messageChatId, refreshResponse.getRefreshToken());
+            accessTokensMap.put(
+                    messageChatId,
+                    accessToken,
+                    accessTokenTtl.toMinutes(),
+                    TimeUnit.MINUTES);
+            refreshTokensMap.put(
+                    messageChatId,
+                    refreshResponse.getRefreshToken(),
+                    refreshTokenTtl.toMinutes(),
+                    TimeUnit.MINUTES);
 
             response = taskService.getTaskList(accessToken);
         }
@@ -235,8 +279,15 @@ public class BotService {
             }
 
             token = refreshResponse.getAccessToken();
-            accessTokensMap.put(messageChatId, token);
-            refreshTokensMap.put(messageChatId, refreshResponse.getRefreshToken());
+            accessTokensMap.put(
+                    messageChatId,
+                    token,accessTokenTtl.toMinutes(),
+                    TimeUnit.MINUTES);
+            refreshTokensMap.put(
+                    messageChatId,
+                    refreshResponse.getRefreshToken(),
+                    refreshTokenTtl.toMinutes(),
+                    TimeUnit.MINUTES);
 
             taskService.createTask(token, messageText);
         }
