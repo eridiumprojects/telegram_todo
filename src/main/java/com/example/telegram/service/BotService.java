@@ -1,327 +1,274 @@
 package com.example.telegram.service;
 
 import com.example.telegram.model.constant.MessagePool;
+import com.example.telegram.model.dto.BotChange;
 import com.example.telegram.model.dto.request.LoginRequest;
-import com.example.telegram.model.dto.request.TaskRequest;
-import com.example.telegram.model.dto.response.JwtResponse;
 import com.example.telegram.model.dto.response.RefreshResponse;
 import com.example.telegram.model.enums.BotState;
 import com.example.telegram.model.enums.ECommand;
-import com.example.telegram.model.enums.LoginState;
-import com.example.telegram.model.exception.AuthException;
-import com.example.telegram.model.exception.ObjectNotFoundException;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.apache.http.HttpStatus;
+import org.redisson.api.RMap;
 import org.redisson.api.RMapCache;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
-import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.UUID;
+
+import static com.example.telegram.model.constant.DefaultMessages.IN_ACCOUNT;
+import static com.example.telegram.model.constant.MessagePool.*;
 
 @Service
 @Getter
 @Setter
 @Log4j2
 public class BotService {
-    private TelegramLongPollingBot bot;
-    private BotState botState;
-    private LoginState currentState;
     private AuthService authService;
     private TaskService taskService;
-    public LoginRequest loginUser;
     private final RedissonClient redissonClient;
-    private JwtResponse jwtResponse;
     public static final String ACCESS_CACHE = "accessCache";
     public static final String REFRESH_CACHE = "refreshCache";
-    public RMapCache<Long, String> map;
-    public RMapCache<Long, String> refresh;
+    public static final String USER_STATES = "userState";
+    public RMapCache<Long, String> accessTokensMap;
+    public RMapCache<Long, String> refreshTokensMap;
+    private RMap<Long, String> userStates;
+    private RMap<Long, String> userNames;
 
-    public BotService(TelegramLongPollingBot bot,
-                      RedissonClient redissonClient,
-                      AuthService authService,
-                      TaskService taskService) {
-        this.bot = bot;
+    public BotService(
+            RedissonClient redissonClient,
+            AuthService authService,
+            TaskService taskService
+    ) {
         this.redissonClient = redissonClient;
-        currentState = LoginState.ASK_USERNAME;
-        this.loginUser = new LoginRequest();
-
         this.authService = authService;
         this.taskService = taskService;
     }
 
-    public void handleMenuState(long messageChatId) {
-        map = redissonClient.getMapCache(ACCESS_CACHE);
-        refresh = redissonClient.getMapCache(REFRESH_CACHE);
+    public String process(Long userId, String message) {
+        userStates = redissonClient.getMap(USER_STATES);
+        var botState = BotState.valueOf(userStates.getOrDefault(
+                userId,
+                BotState.BASE.name()));
 
-        if (map.containsKey(messageChatId)) {
-            sendMessage(messageChatId, MessagePool.ALREADY_LOGGED);
-            handleInAccountState(messageChatId, ECommand.RUN.getCommand());
-            botState = BotState.NEXT;
+        //start
+        if (message.equals(ECommand.START.getCommand())) {
+            //start
 
+            var result = handleStartState(userId);
+            userStates.put(userId, result.getBotState().name());
+            return result.getMessage();
+
+        } else if (message.equals(ECommand.LOGIN.getCommand()) && botState.equals(BotState.BASE)) {
+            //login ask username
+
+            var result = processAskUsername();
+            userStates.put(userId, result.getBotState().name());
+            return result.getMessage();
+
+        } else if (botState.equals(BotState.LOGGING_IN_ASKED_LOGIN) && !ECommand.commands.contains(message)) {
+            //login ask password
+
+            var result = processAskPassword(userId, message);
+            userStates.put(userId, result.getBotState().name());
+            return result.getMessage();
+
+        } else if (botState.equals(BotState.LOGGING_IN_ASKED_PASS) && !ECommand.commands.contains(message)) {
+            //login authorize user
+
+            var result = processLoginProcessing(userId, message);
+            userStates.put(userId, result.getBotState().name());
+            return result.getMessage();
+
+        } else if (botState.equals(BotState.IN_ACCOUNT_BASE) && ECommand.inAccountCommands.contains(message)) {
+            //basic IN_ACCOUNT commands
+            if (message.equals(ECommand.SHOW.getCommand())) {
+
+                //list
+                var result = handleShowState(userId);
+                userStates.put(userId, result.getBotState().name());
+                return result.getMessage();
+
+            } else if (message.equals(ECommand.SIGNOUT.getCommand())) {
+
+                //sign out
+                var result = handleSignoutState(userId);
+                userStates.put(userId, result.getBotState().name());
+                return result.getMessage();
+
+            } else if (message.equals(ECommand.CREATE.getCommand())) {
+
+                //asking data for create task
+                var result = processAskTaksData();
+                userStates.put(userId, result.getBotState().name());
+                return result.getMessage();
+
+            }
+        } else if (botState.equals(BotState.IN_ACCOUNT_ASKED_TASK)) {
+
+            //create
+            var result = handleCreateState(userId, message);
+            userStates.put(userId, result.getBotState().name());
+            return result.getMessage();
+
+        }
+        return getDefaultMessage(botState);
+    }
+
+    public String getDefaultMessage(BotState botState) {
+        return switch (botState) {
+            case BASE -> LOGIN_IN_ACCOUNT_WITH_MESSAGE;
+            case IN_ACCOUNT_BASE -> IN_ACCOUNT + "\n\n" + MAIN_MENU;
+            case IN_ACCOUNT_ASKED_TASK, LOGGING_IN_ASKED_LOGIN, LOGGING_IN_ASKED_PASS -> INVALID_COMMAND_MESSAGE;
+        };
+    }
+
+    public BotChange handleStartState(long messageChatId) {
+        accessTokensMap = redissonClient.getMapCache(ACCESS_CACHE);
+        refreshTokensMap = redissonClient.getMapCache(REFRESH_CACHE);
+
+        if (accessTokensMap.containsKey(messageChatId)) {
             log.info("User has been already login in account");
-            return;
+            return new BotChange(
+                    BotState.IN_ACCOUNT_BASE,
+                    MessagePool.ALREADY_LOGGED + "\n\n" + MAIN_MENU);
         }
 
-        sendMessage(messageChatId, MessagePool.LOGIN_IN_ACCOUNT_WITH_MESSAGE + ECommand.LOGIN.getCommand());
         log.info("User is trying to login");
-        botState = BotState.LOGIN;
+        return new BotChange(
+                BotState.BASE,
+                LOGIN_IN_ACCOUNT_WITH_MESSAGE);
     }
 
-    public void handleLoginState(long messageChatId, String messageText) {
-        switch (currentState) {
-            case ASK_USERNAME -> processAskUsername(messageChatId, messageText);
-            case ASK_PASSWORD -> processAskPassword(messageChatId, messageText);
-            case LOGIN_PROCESSING -> processLoginProcessing(messageChatId, messageText);
-        }
+    public BotChange processAskUsername() {
+        return new BotChange(BotState.LOGGING_IN_ASKED_LOGIN, MessagePool.INPUT_USERNAME_MESSAGE);
     }
 
-    public void processAskUsername(long messageChatId, String messageText) {
-        if (messageText.equals(ECommand.LOGIN.getCommand())) {
-            sendMessage(messageChatId, MessagePool.INPUT_USERNAME_MESSAGE);
-            currentState = LoginState.ASK_PASSWORD;
-            return;
-        }
-
-        sendMessage(messageChatId, MessagePool.INVALID_COMMAND_MESSAGE);
+    public BotChange processAskPassword(Long userId, String messageText) {
+        userNames.put(userId, messageText);
+        return new BotChange(BotState.LOGGING_IN_ASKED_PASS, MessagePool.INPUT_PASSWORD_MESSAGE);
     }
 
-    public void processAskPassword(long messageChatId, String messageText) {
-        loginUser.setUsername(messageText);
+    public BotChange processLoginProcessing(long messageChatId, String messageText) {
+        accessTokensMap = redissonClient.getMapCache(ACCESS_CACHE);
+        refreshTokensMap = redissonClient.getMapCache(REFRESH_CACHE);
 
-        sendMessage(messageChatId, MessagePool.INPUT_PASSWORD_MESSAGE);
-        currentState = LoginState.LOGIN_PROCESSING;
-    }
+        var jwtResponse = authService.sendRequestToAuthService(new LoginRequest(
+                userNames.get(messageChatId),
+                messageText,
+                UUID.randomUUID()));
 
-    public void processLoginProcessing(long messageChatId, String messageText) {
-
-        map = redissonClient.getMapCache(ACCESS_CACHE);
-        refresh = redissonClient.getMapCache(REFRESH_CACHE);
-
-        loginUser.setPassword(messageText);
-        jwtResponse = authService.sendRequestToAuthService(loginUser);
-
-        if (authService.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-            sendMessage(messageChatId, MessagePool.INVALID_DATA_MESSAGE);
-            botState = BotState.MENU;
-            currentState = LoginState.ASK_USERNAME;
-
-            handleMenuState(messageChatId);
-
+        if (jwtResponse == null) {
             log.warn("User has bad credentials");
+            return new BotChange(
+                    BotState.BASE,
+                    MessagePool.INVALID_DATA_MESSAGE + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
         }
 
-        if (authService.getStatusCode() == HttpStatus.SC_OK) {
-            map.put(messageChatId, jwtResponse.getAccessToken());
-            refresh.put(messageChatId, jwtResponse.getRefreshToken());
+        accessTokensMap.put(messageChatId, jwtResponse.getAccessToken());
+        refreshTokensMap.put(messageChatId, jwtResponse.getRefreshToken());
+        log.info("User logged into the account");
+        log.info("Access map saved the user id and token successfully");
+        log.info("Refresh map saved the user id and token successfully");
 
-            sendMessage(messageChatId, MessagePool.SUCCESSFULLY_LOGGED_MESSAGE);
-            sendMessage(messageChatId, MessagePool.NEXT_ACTS_MESSAGE +
-                    ECommand.RUN.getCommand());
-            botState = BotState.IN_ACCOUNT;
-            currentState = LoginState.ASK_USERNAME;
-
-            log.info("User logged into the account");
-            log.info("Access map saved the user id and token successfully");
-            log.info("Refresh map saved the user id and token successfully");
-        }
+        return new BotChange(
+                BotState.IN_ACCOUNT_BASE,
+                MessagePool.SUCCESSFULLY_LOGGED_MESSAGE + "\n\n" + MAIN_MENU);
     }
 
-    public void handleInAccountState(long messageChatId, String messageText) {
-        if (messageText.equals(ECommand.RUN.getCommand())) {
-            sendMessage(messageChatId,
-                    MessagePool.IN_ACCOUNT_FIRST_MESSAGE +
-                            ECommand.CREATE.getCommand() + "\n" +
-                            MessagePool.IN_ACCOUNT_SECOND_MESSAGE +
-                            ECommand.SHOW.getCommand() + "\n" +
-                            MessagePool.IN_ACCOUNT_THIRD_MESSAGE +
-                            ECommand.SIGNOUT.getCommand());
-            botState = BotState.NEXT;
-            return;
-        }
-
-        sendMessage(messageChatId, MessagePool.INVALID_COMMAND_MESSAGE);
-    }
-
-    public void handleNextState(long messageChatId, String messageText) {
-        map = redissonClient.getMapCache(ACCESS_CACHE);
-        refresh = redissonClient.getMapCache(REFRESH_CACHE);
-
-        String token = (map.containsKey(messageChatId)) ? map.get(messageChatId) :
-                jwtResponse.getAccessToken();
-        String refreshToken = (refresh.containsKey(messageChatId)) ? refresh.get(messageChatId) :
-                jwtResponse.getRefreshToken();
-
-        if (messageText.equals(ECommand.CREATE.getCommand())) {
-            botState = BotState.CREATE;
-            sendMessage(messageChatId, MessagePool.INPUT_TASK_DATA_MESSAGE);
-            return;
-        }
-
-        if (messageText.equals(ECommand.SHOW.getCommand())) {
-            handleShowState(messageChatId, token, refreshToken);
-            return;
-        }
-
-        if (messageText.equals(ECommand.SIGNOUT.getCommand())) {
-            handleSignoutState(messageChatId);
-            return;
-        }
-
-        sendMessage(messageChatId, MessagePool.INVALID_COMMAND_MESSAGE);
-    }
-
-    private void handleSignoutState(long messageChatId) {
-        sendMessage(messageChatId, MessagePool.SIGNOUT_MESSAGE);
-
-        map.remove(messageChatId);
-        refresh.remove(messageChatId);
-
-        botState = BotState.MENU;
-
-        handleMenuState(messageChatId);
+    private BotChange handleSignoutState(long messageChatId) {
+        accessTokensMap.remove(messageChatId);
+        refreshTokensMap.remove(messageChatId);
 
         log.info("User logged out of the account");
         log.info("Access map deleted the user id and token successfully");
         log.info("Refresh map deleted the user id and token successfully");
+
+        return new BotChange(
+                BotState.BASE,
+                MessagePool.SIGNOUT_MESSAGE + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
     }
 
-    public void handleShowState(Long messageChatId,
-                                String token,
-                                String refreshToken) {
-        try {
-            botState = BotState.SHOW;
-            String tasks = taskService.sendRequestToTaskService(token, null, false);
+    public BotChange handleShowState(
+            Long messageChatId
+    ) {
+        accessTokensMap = redissonClient.getMapCache(ACCESS_CACHE);
+        refreshTokensMap = redissonClient.getMapCache(REFRESH_CACHE);
+        var accessToken = accessTokensMap.getOrDefault(messageChatId, null);
 
-            if (taskService.getStatusCode() != HttpStatus.SC_OK) {
-                RefreshResponse refreshResponse = processingRefreshTokens(refreshToken);
+        String response = taskService.getTaskList(accessToken);
 
-                if (checkRefreshState(taskService.getStatusCode())) {
-                    processingExpiredSession(messageChatId);
-                    return;
-                }
-
-                token = refreshResponse.getAccessToken();
-                tasks = taskService.sendRequestToTaskService(token, null, false);
-
-                map.put(messageChatId, token);
-                refresh.put(messageChatId, refreshResponse.getRefreshToken());
+        if (response == null) {
+            var refreshToken = refreshTokensMap.getOrDefault(messageChatId, null);
+            RefreshResponse refreshResponse = processingRefreshTokens(refreshToken);
+            if (refreshResponse == null) {
+                return processingExpiredSession(messageChatId);
             }
+            accessToken = refreshResponse.getAccessToken();
+            accessTokensMap.put(messageChatId, accessToken);
+            refreshTokensMap.put(messageChatId, refreshResponse.getRefreshToken());
 
-            if (tasks.equals("[]")) {
-                sendMessage(messageChatId, MessagePool.EMPTY_LIST_MESSAGE);
-                return;
-            }
-
-            sendMessage(messageChatId, taskService.tasksFromJsonString(tasks));
-
-            log.info("User has been received a task list");
-        } catch (ObjectNotFoundException | IOException e) {
-            log.warn("This user does not have such task");
+            response = taskService.getTaskList(accessToken);
         }
 
-        handleInAccountState(messageChatId, ECommand.RUN.getCommand());
+        if (response.equals("[]")) {
+            response = MessagePool.EMPTY_LIST_MESSAGE;
+        }
+
+        log.info("User has received a task list");
+
+        return new BotChange(BotState.IN_ACCOUNT_BASE, response + "\n\n" + MAIN_MENU);
     }
 
-    public void handleCreateState(long messageChatId, String messageText) {
-        try {
-            map = redissonClient.getMapCache(ACCESS_CACHE);
-            refresh = redissonClient.getMapCache(REFRESH_CACHE);
+    public BotChange processAskTaksData() {
+        return new BotChange(BotState.IN_ACCOUNT_ASKED_TASK, MessagePool.INPUT_TASK_DATA_MESSAGE);
+    }
 
-            TaskRequest taskRequest = new TaskRequest();
-            taskRequest.setData(messageText);
+    public BotChange handleCreateState(long messageChatId, String messageText) {
+        accessTokensMap = redissonClient.getMapCache(ACCESS_CACHE);
+        refreshTokensMap = redissonClient.getMapCache(REFRESH_CACHE);
 
-            String token = (map.containsKey(messageChatId)) ? map.get(messageChatId) :
-                    jwtResponse.getAccessToken();
-            String refreshToken = (refresh.containsKey(messageChatId)) ? refresh.get(messageChatId) :
-                    jwtResponse.getRefreshToken();
+        String token = accessTokensMap.getOrDefault(messageChatId, null);
 
-            taskService.sendRequestToTaskService(token, taskRequest, true);
+        var result = taskService.createTask(token, messageText);
 
-            if (taskService.getStatusCode() != HttpStatus.SC_OK) {
-                RefreshResponse refreshResponse = processingRefreshTokens(refreshToken);
+        if (!result) {
+            String refreshToken = refreshTokensMap.getOrDefault(messageChatId, null);
+            RefreshResponse refreshResponse = processingRefreshTokens(refreshToken);
 
-                if (checkRefreshState(taskService.getStatusCode())) {
-                    processingExpiredSession(messageChatId);
-                    return;
-                }
-
-                token = refreshResponse.getAccessToken();
-                taskService.sendRequestToTaskService(token, taskRequest, true);
-
-                map.put(messageChatId, token);
-                refresh.put(messageChatId, refreshResponse.getRefreshToken());
+            if (refreshResponse == null) {
+                return processingExpiredSession(messageChatId);
             }
 
-            sendMessage(messageChatId, MessagePool.TASK_CREATED_MESSAGE);
+            token = refreshResponse.getAccessToken();
+            accessTokensMap.put(messageChatId, token);
+            refreshTokensMap.put(messageChatId, refreshResponse.getRefreshToken());
 
-            handleInAccountState(messageChatId, ECommand.RUN.getCommand());
-            botState = BotState.NEXT;
-
-            log.info("User has been created a task");
-        } catch (AuthException | IOException e) {
-            log.warn("User has bad credentials");
+            taskService.createTask(token, messageText);
         }
+
+        log.info("User has been created a task");
+
+        return new BotChange(
+                BotState.IN_ACCOUNT_BASE,
+                MessagePool.TASK_CREATED_MESSAGE + "\n\n" + MAIN_MENU);
     }
 
-    public void processingExpiredSession(Long messageChatId) {
-        sendMessage(messageChatId, MessagePool.SESSION_EXPIRED);
-
-        botState = BotState.MENU;
-        currentState = LoginState.ASK_USERNAME;
-
-        map.remove(messageChatId);
-        refresh.remove(messageChatId);
-
-        handleMenuState(messageChatId);
+    public BotChange processingExpiredSession(Long messageChatId) {
+        accessTokensMap.remove(messageChatId);
+        refreshTokensMap.remove(messageChatId);
 
         log.warn("User session has expired");
         log.info("Access map deleted the user id and token successfully");
         log.info("Refresh map deleted the user id and token successfully");
+
+        return new BotChange(
+                BotState.BASE,
+                MessagePool.SESSION_EXPIRED + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
     }
 
 
     public RefreshResponse processingRefreshTokens(String refreshToken) {
         return authService.refreshToken(refreshToken);
-    }
-
-    private boolean checkRefreshState(int statusCode) {
-        return statusCode == HttpStatus.SC_UNAUTHORIZED;
-    }
-
-    public void initCommands() {
-        try {
-            List<BotCommand> listOfCommands = new ArrayList<>();
-            listOfCommands.add(new BotCommand(
-                    ECommand.START.getCommand(),
-                    MessagePool.INFO_START_MESSAGE));
-            bot.execute(new SetMyCommands(
-                    listOfCommands,
-                    new BotCommandScopeDefault(),
-                    null));
-        } catch (TelegramApiException E) {
-            log.warn("Initialization of commands processing failed");
-        }
-    }
-
-    public void sendMessage(long chatId, String text) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setText(text);
-
-        try {
-            bot.execute(message);
-        } catch (TelegramApiException e) {
-            log.error("Initialization of message processing failed");
-        }
     }
 }

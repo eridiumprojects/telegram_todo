@@ -42,7 +42,6 @@ public class AuthService {
                     new HttpEntity<>(user),
                     JwtResponse.class
             );
-
             setStatusCode(responseEntity.getStatusCode().value());
             return responseEntity.getBody();
         } catch (RestClientException e) {
