@@ -25,7 +25,6 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 import static com.example.telegram.model.constant.MessagePool.LOGIN_IN_ACCOUNT_WITH_MESSAGE;
-import static com.example.telegram.model.constant.MessagePool.MAIN_MENU;
 
 @Service
 @Getter
@@ -56,26 +55,15 @@ public class AuthService {
         this.refreshTokenTtl = refreshTokenTtl;
     }
 
-    public BotChange checkForLogin(Long userId) {
+    public boolean checkForLogin(Long userId) {
         if (accessTokensMap.containsKey(userId)) {
             log.info("Valid access token exists");
-            return new BotChange(
-                    BotState.IN_ACCOUNT_BASE,
-                    MessagePool.ALREADY_LOGGED + "\n\n" + MAIN_MENU);
+            return true;
         } else if (refreshTokensMap.containsKey(userId)) {
             log.info("Valid refresh token exists");
-            var result = refreshToken(userId);
-            if (result) {
-                return new BotChange(
-                        BotState.IN_ACCOUNT_BASE,
-                        MessagePool.ALREADY_LOGGED + "\n\n" + MAIN_MENU);
-            }
+            return refreshToken(userId);
         }
-
-        log.info("User is trying to login");
-        return new BotChange(
-                BotState.BASE,
-                LOGIN_IN_ACCOUNT_WITH_MESSAGE);
+        return false;
     }
 
     public boolean loginUser(LoginRequest user) {
