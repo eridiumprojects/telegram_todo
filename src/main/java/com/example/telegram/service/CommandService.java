@@ -40,7 +40,7 @@ public class CommandService {
             }
             case SIGNOUT -> {
                 if (botState.equals(BotState.IN_ACCOUNT_BASE)) {
-                    result = authService.processSignOut(userId);
+                    result = authService.processSignOut(userId, false);
                 }
             }
             case START -> result = handleStart(userId);
@@ -75,7 +75,7 @@ public class CommandService {
         if (response == null) {
             var refreshResult = authService.refreshToken(messageChatId);
             if (!refreshResult) {
-                return authService.processSignOut(messageChatId);
+                return authService.processSignOut(messageChatId, true);
             }
             accessToken = authService.getUserAccessToken(messageChatId);
             response = taskService.getTaskList(accessToken);

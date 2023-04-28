@@ -126,7 +126,7 @@ public class AuthService {
         }
     }
 
-    public BotChange processSignOut(Long messageChatId) {
+    public BotChange processSignOut(Long messageChatId, boolean forced) {
         accessTokensMap.remove(messageChatId);
         refreshTokensMap.remove(messageChatId);
 
@@ -134,9 +134,10 @@ public class AuthService {
         log.info("Access map deleted the user id and token successfully");
         log.info("Refresh map deleted the user id and token successfully");
 
+        var messageBeginning = forced ? MessagePool.SESSION_EXPIRED : MessagePool.SIGNOUT_MESSAGE;
         return new BotChange(
                 BotState.BASE,
-                MessagePool.SESSION_EXPIRED + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
+                messageBeginning + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
     }
 
     public String getUserAccessToken(Long userId) {

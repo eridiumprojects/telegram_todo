@@ -49,7 +49,7 @@ public class MessagingService {
             var refreshResponse = authService.refreshToken(messageChatId);
 
             if (!refreshResponse) {
-                return authService.processSignOut(messageChatId);
+                return authService.processSignOut(messageChatId, true);
             }
 
             accessToken = authService.getUserAccessToken(messageChatId);
