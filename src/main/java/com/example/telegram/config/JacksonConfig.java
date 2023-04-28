@@ -9,9 +9,7 @@ import org.springframework.context.annotation.Configuration;
 public class JacksonConfig {
     @Bean
     public ObjectMapper objectMapper() {
-        return new
-                ObjectMapper()
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 }
 

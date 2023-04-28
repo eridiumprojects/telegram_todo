@@ -126,7 +126,7 @@ public class AuthService {
         }
     }
 
-    public BotChange processSignOut(Long messageChatId, boolean forced) {
+    public BotChange signOut(Long messageChatId, boolean forced) {
         accessTokensMap.remove(messageChatId);
         refreshTokensMap.remove(messageChatId);
 

@@ -4,7 +4,7 @@ server:
 tg:
   bot:
     name: kookacreq_bot
-    token: 6046387088:AAH1seIqRdOHonwiOkXhWZsizGBkus663wQ
+    token: ${BOT_TOKEN}
 
 backend:
   url: http://localhost:8080/api

@@ -16,6 +16,6 @@ public class RestTemplateConfig {
     public RestTemplateBuilder restTemplate(RestTemplateBuilderConfigurer configurer) {
         return configurer.configure(new RestTemplateBuilder())
                 .setConnectTimeout(Duration.ofSeconds(10))
-                .setReadTimeout(Duration.ofSeconds(10));
+                .setReadTimeout(Duration.ofSeconds(5));
     }
 }
