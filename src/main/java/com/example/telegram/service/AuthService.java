@@ -24,12 +24,10 @@ import org.springframework.web.client.RestTemplate;
 public class AuthService {
     private int statusCode;
     private final RestTemplate restTemplate;
-    private final String REFRESH_URL = "/auth/refresh";
-    private final String AUTH_URL = "/auth/signin";
 
     public AuthService(
             RestTemplateBuilder restTemplateBuilder,
-            @Value("backend.url") String baseApiUrl
+            @Value("${backend.url}") String baseApiUrl
     ) {
         this.restTemplate = restTemplateBuilder.rootUri(baseApiUrl).build();
     }
@@ -37,7 +35,7 @@ public class AuthService {
     public JwtResponse sendRequestToAuthService(LoginRequest user) {
         try {
             ResponseEntity<JwtResponse> responseEntity = restTemplate.exchange(
-                    AUTH_URL,
+                    "/auth/signin",
                     HttpMethod.POST,
                     new HttpEntity<>(user),
                     JwtResponse.class
@@ -55,7 +53,7 @@ public class AuthService {
         refreshRequest.setRefreshToken(refreshToken);
         try {
             ResponseEntity<RefreshResponse> responseEntity = restTemplate.exchange(
-                    REFRESH_URL,
+                    "/auth/refresh",
                     HttpMethod.POST,
                     new HttpEntity<>(refreshRequest),
                     RefreshResponse.class

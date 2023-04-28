@@ -9,6 +9,13 @@ tg:
 backend:
   url: http://localhost:8080/api
 
+storage:
+  user-state: userStageStorage
+  user-name: userNameStorage
+  access-token: accessTokenStorage
+  refresh-token: refreshTokenStorage
+
+
 spring:
   data:
     redis:

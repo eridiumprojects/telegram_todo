@@ -28,7 +28,7 @@ public class TaskService {
     private final RestTemplate restTemplate;
 
     public TaskService(RestTemplateBuilder restTemplateBuilder,
-                       @Value("backend.url") String baseApiUrl) {
+                       @Value("${backend.url}") String baseApiUrl) {
         this.restTemplate = restTemplateBuilder.rootUri(baseApiUrl).build();
     }
 

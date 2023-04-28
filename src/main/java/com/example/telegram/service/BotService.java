@@ -12,6 +12,7 @@ import lombok.extern.log4j.Log4j2;
 import org.redisson.api.RMap;
 import org.redisson.api.RMapCache;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -27,9 +28,6 @@ public class BotService {
     private AuthService authService;
     private TaskService taskService;
     private final RedissonClient redissonClient;
-    public static final String ACCESS_CACHE = "accessCache";
-    public static final String REFRESH_CACHE = "refreshCache";
-    public static final String USER_STATES = "userState";
     public RMapCache<Long, String> accessTokensMap;
     public RMapCache<Long, String> refreshTokensMap;
     private RMap<Long, String> userStates;
@@ -38,15 +36,23 @@ public class BotService {
     public BotService(
             RedissonClient redissonClient,
             AuthService authService,
-            TaskService taskService
+            TaskService taskService,
+            @Value("${storage.user-name}") String userNameStorage,
+            @Value("${storage.user-state}") String userStateStorage,
+            @Value("${storage.access-token}") String accessTokenStorage,
+            @Value("${storage.refresh-token}") String refreshTokenStorage
     ) {
         this.redissonClient = redissonClient;
         this.authService = authService;
         this.taskService = taskService;
+
+        this.userStates = redissonClient.getMap(userStateStorage);
+        this.userNames = redissonClient.getMap(userNameStorage);
+        this.accessTokensMap = redissonClient.getMapCache(accessTokenStorage);
+        this.refreshTokensMap = redissonClient.getMapCache(refreshTokenStorage);
     }
 
     public String process(Long userId, String message) {
-        userStates = redissonClient.getMap(USER_STATES);
         var botState = BotState.valueOf(userStates.getOrDefault(
                 userId,
                 BotState.BASE.name()));
@@ -124,9 +130,6 @@ public class BotService {
     }
 
     public BotChange handleStartState(long messageChatId) {
-        accessTokensMap = redissonClient.getMapCache(ACCESS_CACHE);
-        refreshTokensMap = redissonClient.getMapCache(REFRESH_CACHE);
-
         if (accessTokensMap.containsKey(messageChatId)) {
             log.info("User has been already login in account");
             return new BotChange(
@@ -150,9 +153,6 @@ public class BotService {
     }
 
     public BotChange processLoginProcessing(long messageChatId, String messageText) {
-        accessTokensMap = redissonClient.getMapCache(ACCESS_CACHE);
-        refreshTokensMap = redissonClient.getMapCache(REFRESH_CACHE);
-
         var jwtResponse = authService.sendRequestToAuthService(new LoginRequest(
                 userNames.get(messageChatId),
                 messageText,
@@ -192,8 +192,6 @@ public class BotService {
     public BotChange handleShowState(
             Long messageChatId
     ) {
-        accessTokensMap = redissonClient.getMapCache(ACCESS_CACHE);
-        refreshTokensMap = redissonClient.getMapCache(REFRESH_CACHE);
         var accessToken = accessTokensMap.getOrDefault(messageChatId, null);
 
         String response = taskService.getTaskList(accessToken);
@@ -225,11 +223,7 @@ public class BotService {
     }
 
     public BotChange handleCreateState(long messageChatId, String messageText) {
-        accessTokensMap = redissonClient.getMapCache(ACCESS_CACHE);
-        refreshTokensMap = redissonClient.getMapCache(REFRESH_CACHE);
-
         String token = accessTokensMap.getOrDefault(messageChatId, null);
-
         var result = taskService.createTask(token, messageText);
 
         if (!result) {

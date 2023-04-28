@@ -24,7 +24,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     @Value("${tg.bot.token}")
     private String token;
 
-    @Value("${tg.bot.name")
+    @Value("${tg.bot.name}")
     private String username;
 
     public MyTelegramBot(BotService botService) {
