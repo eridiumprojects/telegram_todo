@@ -10,8 +10,6 @@ import com.example.telegram.model.enums.ECommand;
 import com.example.telegram.model.enums.LoginState;
 import com.example.telegram.model.exception.AuthException;
 import com.example.telegram.model.exception.ObjectNotFoundException;
-import com.example.telegram.util.RequestBuilder;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -49,14 +47,16 @@ public class BotService {
     public RMapCache<Long, String> refresh;
 
     public BotService(TelegramLongPollingBot bot,
-                      RedissonClient redissonClient) {
+                      RedissonClient redissonClient,
+                      AuthService authService,
+                      TaskService taskService) {
         this.bot = bot;
         this.redissonClient = redissonClient;
         currentState = LoginState.ASK_USERNAME;
         this.loginUser = new LoginRequest();
 
-        this.authService = new AuthService(new RequestBuilder(new ObjectMapper()));
-        this.taskService = new TaskService(new RequestBuilder(new ObjectMapper()));
+        this.authService = authService;
+        this.taskService = taskService;
     }
 
     public void handleMenuState(long messageChatId) {

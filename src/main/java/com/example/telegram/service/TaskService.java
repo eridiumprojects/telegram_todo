@@ -1,16 +1,17 @@
 package com.example.telegram.service;
 
 import com.example.telegram.model.dto.request.TaskRequest;
-import com.example.telegram.util.RequestBuilder;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -20,17 +21,21 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Service
-@RequiredArgsConstructor
 @Getter
 @Setter
 public class TaskService {
     private int statusCode;
-    private final RequestBuilder requestBuilder;
+    private final RestTemplate restTemplate;
+
+    public TaskService(RestTemplateBuilder restTemplateBuilder,
+                       @Value("backend.url") String baseApiUrl) {
+        this.restTemplate = restTemplateBuilder.rootUri(baseApiUrl).build();
+    }
 
     public String sendRequestToTaskService(String token, TaskRequest taskRequest, boolean option) throws IOException {
         String path = option ? "/task/create" : "/task/list";
 
-        try (CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpClient httpclient = HttpClients.createDefault();
              CloseableHttpResponse response = requestBuilder.createResponse(
                      httpclient,
                      taskRequest,
