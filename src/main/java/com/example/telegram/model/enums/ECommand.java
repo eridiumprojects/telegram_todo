@@ -10,13 +10,13 @@ public enum ECommand {
     SHOW("/show"),
     START("/start"),
     SIGNOUT("/signout");
-    public static Set<String> inAccountCommands = Set.of(
+    public static final Set<String> inAccountCommands = Set.of(
             CREATE.getCommand(),
             SHOW.getCommand(),
             SIGNOUT.getCommand(),
             MENU.getCommand());
 
-    public static Set<String> commands = Set.of(
+    public static final Set<String> commands = Set.of(
             MENU.getCommand(),
             LOGIN.getCommand(),
             RUN.getCommand(),

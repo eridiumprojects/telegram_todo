@@ -1,13 +1,9 @@
 package com.example.telegram;
 
 import com.example.telegram.model.constant.MessagePool;
-import com.example.telegram.model.enums.BotState;
 import com.example.telegram.model.enums.ECommand;
-import com.example.telegram.service.AuthService;
 import com.example.telegram.service.BotService;
-import com.example.telegram.service.TaskService;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -31,9 +27,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     @Value("${tg.bot.name")
     private String username;
 
-    public MyTelegramBot(TaskService taskService,
-                         AuthService authService,
-                         BotService botService) {
+    public MyTelegramBot(BotService botService) {
         this.botService = botService;
         initCommands();
     }
@@ -45,7 +39,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
             var result = botService.process(messageChatId, messageText);
-            sendMessage(messageChatId, result.getMessage());
+            sendMessage(messageChatId, result);
         }
     }
 
