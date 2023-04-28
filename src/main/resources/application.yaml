@@ -5,6 +5,12 @@ tg:
   bot:
     name: kookacreq_bot
     token: 6046387088:AAH1seIqRdOHonwiOkXhWZsizGBkus663wQ
-#------------------
+
 backend:
   url: http://localhost:8080/api
+
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379

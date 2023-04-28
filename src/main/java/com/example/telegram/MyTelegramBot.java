@@ -19,7 +19,6 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     public final TaskService taskService;
     public final AuthService authService;
     private final BotService botService;
-    public LoginRequest loginUser;
     @Value("${tg.bot.token}")
     private String token;
 
@@ -27,11 +26,12 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     private String username;
     private final RedissonClient redissonClient;
 
-    public MyTelegramBot(TaskService taskService, AuthService authService, RedissonClient redissonClient) {
+    public MyTelegramBot(TaskService taskService,
+                         AuthService authService,
+                         RedissonClient redissonClient) {
         this.taskService = taskService;
         this.authService = authService;
         this.redissonClient = redissonClient;
-        this.loginUser = new LoginRequest();
 
         botService = new BotService(this, this.redissonClient);
         botService.initCommands();

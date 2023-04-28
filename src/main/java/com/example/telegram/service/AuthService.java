@@ -9,7 +9,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -30,15 +33,10 @@ public class AuthService {
 
             RestTemplate restTemplate = new RestTemplate();
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<LoginRequest> requestEntity = new HttpEntity<>(user, headers);
-
             ResponseEntity<JwtResponse> responseEntity = restTemplate.exchange(
                     AUTH_URL,
                     HttpMethod.POST,
-                    requestEntity,
+                    new HttpEntity<>(user),
                     JwtResponse.class
             );
 
@@ -62,9 +60,7 @@ public class AuthService {
             ResponseEntity<RefreshResponse> responseEntity = restTemplate.exchange(
                     REFRESH_URL,
                     HttpMethod.POST,
-                    new HttpEntity<>(
-                            refreshRequest
-                    ),
+                    new HttpEntity<>(refreshRequest),
                     RefreshResponse.class
             );
 

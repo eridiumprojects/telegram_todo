@@ -48,7 +48,8 @@ public class BotService {
     public RMapCache<Long, String> map;
     public RMapCache<Long, String> refresh;
 
-    public BotService(TelegramLongPollingBot bot, RedissonClient redissonClient) {
+    public BotService(TelegramLongPollingBot bot,
+                      RedissonClient redissonClient) {
         this.bot = bot;
         this.redissonClient = redissonClient;
         currentState = LoginState.ASK_USERNAME;
@@ -176,7 +177,7 @@ public class BotService {
             return;
         }
 
-        sendMessage(messageChatId,MessagePool.INVALID_COMMAND_MESSAGE);
+        sendMessage(messageChatId, MessagePool.INVALID_COMMAND_MESSAGE);
     }
 
     private void handleSignoutState(long messageChatId) {

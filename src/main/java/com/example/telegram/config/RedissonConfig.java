@@ -18,8 +18,8 @@ public class RedissonConfig {
     @Bean
     RedissonClient redissonClient(
             ObjectMapper objectMapper,
-            @Value("localhost") String host,
-            @Value("6379") String port
+            @Value("${spring.data.redis.host}") String host,
+            @Value("${spring.data.redis.port}") String port
     ) {
         Config config = getCommonConfig(objectMapper);
         config.useSingleServer().setAddress(redisUrl(host, port));
