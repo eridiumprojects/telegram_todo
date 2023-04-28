@@ -47,68 +47,32 @@ public class BotService {
                 userId,
                 BotState.BASE.name()));
 
-        //start
+        BotChange result = null;
+
         if (message.equals(ECommand.START.getCommand())) {
-            //start
-
-            var result = handleStart(userId);
-            userStates.put(userId, result.getBotState().name());
-            return result.getMessage();
-
+            result = handleStart(userId);
         } else if (message.equals(ECommand.LOGIN.getCommand()) && botState.equals(BotState.BASE)) {
-            //login ask username
-
-            var result = processAskUsername();
-            userStates.put(userId, result.getBotState().name());
-            return result.getMessage();
-
+            result = processAskUsername();
         } else if (botState.equals(BotState.LOGGING_IN_ASKED_LOGIN) && !ECommand.commands.contains(message)) {
-            //login ask password
-
-            var result = processAskPassword(userId, message);
-            userStates.put(userId, result.getBotState().name());
-            return result.getMessage();
-
+            result = processAskPassword(userId, message);
         } else if (botState.equals(BotState.LOGGING_IN_ASKED_PASS) && !ECommand.commands.contains(message)) {
-            //login authorize user
-
-            var result = loginUser(userId, message);
-            userStates.put(userId, result.getBotState().name());
-            return result.getMessage();
-
+            result = loginUser(userId, message);
         } else if (botState.equals(BotState.IN_ACCOUNT_BASE) && ECommand.inAccountCommands.contains(message)) {
-            //basic IN_ACCOUNT commands
             if (message.equals(ECommand.SHOW.getCommand())) {
-
-                //list
-                var result = handleShowState(userId);
-                userStates.put(userId, result.getBotState().name());
-                return result.getMessage();
-
+                result = handleShowState(userId);
             } else if (message.equals(ECommand.SIGNOUT.getCommand())) {
-
-                //sign out
-                var result = authService.processSignOut(userId);
-                userStates.put(userId, result.getBotState().name());
-                return result.getMessage();
-
+                result = authService.processSignOut(userId);
             } else if (message.equals(ECommand.CREATE.getCommand())) {
-
-                //asking data for create task
-                var result = processAskTaksData();
-                userStates.put(userId, result.getBotState().name());
-                return result.getMessage();
-
+                result = processAskTaksData();
             }
         } else if (botState.equals(BotState.IN_ACCOUNT_ASKED_TASK)) {
-
-            //create
-            var result = handleCreateState(userId, message);
-            userStates.put(userId, result.getBotState().name());
-            return result.getMessage();
-
+            result = handleCreateState(userId, message);
         }
-        return getDefaultMessage(botState);
+        if (result == null) {
+            return getDefaultMessage(botState);
+        }
+        userStates.put(userId, result.getBotState().name());
+        return result.getMessage();
     }
 
     public BotChange handleShowState(

@@ -1,4 +1,4 @@
 package com.example.telegram.service;
 
-public class SubCommandService {
+public class CommandService {
 }
