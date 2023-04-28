@@ -5,4 +5,23 @@ tg:
   bot:
     name: kookacreq_bot
     token: 6046387088:AAH1seIqRdOHonwiOkXhWZsizGBkus663wQ
-    url: http://localhost:8080/api
+
+backend:
+  url: http://localhost:8080/api
+
+storage:
+  user-state: userStageStorage
+  user-name: userNameStorage
+  access-token: accessTokenStorage
+  refresh-token: refreshTokenStorage
+
+security:
+  ttl:
+    access: 10m
+    refresh: 168h
+
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379

@@ -1,63 +1,45 @@
 package com.example.telegram;
 
-import com.example.telegram.model.dto.request.LoginRequest;
-import com.example.telegram.model.enums.BotState;
+import com.example.telegram.model.constant.MessagePool;
 import com.example.telegram.model.enums.ECommand;
-import com.example.telegram.service.AuthService;
 import com.example.telegram.service.BotService;
-import com.example.telegram.service.TaskService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-@Component
+import java.util.ArrayList;
+import java.util.List;
+
+@Slf4j
+@Service
 public class MyTelegramBot extends TelegramLongPollingBot {
-
-    private BotState botState;
-    public final TaskService taskService;
-    public final AuthService authService;
     private final BotService botService;
-    public LoginRequest loginUser;
-
     @Value("${tg.bot.token}")
     private String token;
 
     @Value("${tg.bot.name}")
     private String username;
 
-//    Map<Long, BotState> map = new HashMap<>();
-
-    public MyTelegramBot(TaskService taskService,
-                         AuthService authService,
-                         BotService botService) {
-        this.taskService = taskService;
-        this.authService = authService;
-        this.loginUser = new LoginRequest();
+    public MyTelegramBot(BotService botService) {
         this.botService = botService;
-        botService.initCommands();
-        botState = BotState.AFK;
+        initCommands();
     }
 
-    //TODO разобраться с командой signout, пофиксить баги
-    //TODO прикрепить редис и автоматическую авторизацию
     @Override
     public void onUpdateReceived(Update update) {
         long messageChatId = update.getMessage().getChatId();
         String messageText = update.getMessage().getText();
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            if (messageText.equals(ECommand.START.getCommand())) {
-                botState = BotState.MENU;
-            }
-            switch (botState) {
-                case MENU -> botService.handleMenuState(messageChatId);
-                case LOGIN -> botService.handleLoginState(messageChatId, messageText);
-                case IN_ACCOUNT -> botService.handleInAccountState(messageChatId, messageText);
-                case NEXT -> botService.handleNextState(messageChatId, messageText);
-                case CREATE -> botService.handleCreateState(messageChatId, messageText);
-            }
-            botState = botService.getBotState();
+            var result = botService.process(messageChatId, messageText);
+            sendMessage(messageChatId, result);
         }
     }
 
@@ -71,4 +53,30 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         return token;
     }
 
+    public void initCommands() {
+        try {
+            List<BotCommand> listOfCommands = new ArrayList<>();
+            listOfCommands.add(new BotCommand(
+                    ECommand.START.getCommand(),
+                    MessagePool.INFO_START_MESSAGE));
+            execute(new SetMyCommands(
+                    listOfCommands,
+                    new BotCommandScopeDefault(),
+                    null));
+        } catch (TelegramApiException E) {
+            log.warn("Initialization of commands processing failed");
+        }
+    }
+
+    public void sendMessage(long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(text);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Initialization of message processing failed");
+        }
+    }
 }

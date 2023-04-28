@@ -1,8 +1,22 @@
 package com.example.telegram.model.enums;
 
+import java.util.Set;
+
 public enum ECommand {
-    MENU("/menu"), LOGIN("/login"), REGISTER("/register"), RUN("/run"), CREATE("/create"), SHOW("/show"), RETURN("/return"),
-    START("/start"), SIGNOUT("/signout");
+    MENU("/menu"),
+    LOGIN("/login"),
+    CREATE("/create"),
+    SHOW("/show"),
+    START("/start"),
+    SIGNOUT("/signout");
+    public static final Set<String> commands = Set.of(
+            MENU.getCommand(),
+            LOGIN.getCommand(),
+            CREATE.getCommand(),
+            SHOW.getCommand(),
+            START.getCommand(),
+            SIGNOUT.getCommand()
+    );
 
     private final String command;
 
