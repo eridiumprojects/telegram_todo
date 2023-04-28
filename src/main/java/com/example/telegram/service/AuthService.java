@@ -1,71 +1,157 @@
 package com.example.telegram.service;
 
+import com.example.telegram.model.constant.MessagePool;
+import com.example.telegram.model.dto.BotChange;
 import com.example.telegram.model.dto.request.LoginRequest;
 import com.example.telegram.model.dto.request.RefreshRequest;
 import com.example.telegram.model.dto.response.JwtResponse;
 import com.example.telegram.model.dto.response.RefreshResponse;
+import com.example.telegram.model.enums.BotState;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.redisson.api.RMapCache;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.TimeUnit;
+
+import static com.example.telegram.model.constant.MessagePool.LOGIN_IN_ACCOUNT_WITH_MESSAGE;
+import static com.example.telegram.model.constant.MessagePool.MAIN_MENU;
 
 @Service
 @Getter
 @Setter
 @Log4j2
 public class AuthService {
-    private int statusCode;
     private final RestTemplate restTemplate;
+    private final Duration accessTokenTtl;
+    private final Duration refreshTokenTtl;
+    private final RMapCache<Long, String> accessTokensMap;
+    private final RMapCache<Long, String> refreshTokensMap;
 
     public AuthService(
             RestTemplateBuilder restTemplateBuilder,
-            @Value("${backend.url}") String baseApiUrl
+            @Value("${backend.url}") String baseApiUrl,
+            @Value("${storage.access-token}") String accessTokenStorage,
+            @Value("${storage.refresh-token}") String refreshTokenStorage,
+            @Value("${security.ttl.access}") Duration accessTokenTtl,
+            @Value("${security.ttl.refresh}") Duration refreshTokenTtl,
+            RedissonClient redissonClient
     ) {
         this.restTemplate = restTemplateBuilder.rootUri(baseApiUrl).build();
+
+        this.accessTokensMap = redissonClient.getMapCache(accessTokenStorage);
+        this.refreshTokensMap = redissonClient.getMapCache(refreshTokenStorage);
+
+        this.accessTokenTtl = accessTokenTtl;
+        this.refreshTokenTtl = refreshTokenTtl;
     }
 
-    public JwtResponse sendRequestToAuthService(LoginRequest user) {
+    public BotChange checkForLogin(Long userId) {
+        if (accessTokensMap.containsKey(userId)) {
+            log.info("Valid access token exists");
+            return new BotChange(
+                    BotState.IN_ACCOUNT_BASE,
+                    MessagePool.ALREADY_LOGGED + "\n\n" + MAIN_MENU);
+        } else if (refreshTokensMap.containsKey(userId)) {
+            log.info("Valid refresh token exists");
+            var result = refreshToken(userId);
+            if (result) {
+                return new BotChange(
+                        BotState.IN_ACCOUNT_BASE,
+                        MessagePool.ALREADY_LOGGED + "\n\n" + MAIN_MENU);
+            }
+        }
+
+        log.info("User is trying to login");
+        return new BotChange(
+                BotState.BASE,
+                LOGIN_IN_ACCOUNT_WITH_MESSAGE);
+    }
+
+    public boolean loginUser(LoginRequest user) {
         try {
-            ResponseEntity<JwtResponse> responseEntity = restTemplate.exchange(
+            var response = restTemplate.exchange(
                     "/auth/signin",
                     HttpMethod.POST,
                     new HttpEntity<>(user),
                     JwtResponse.class
-            );
-            setStatusCode(responseEntity.getStatusCode().value());
-            return responseEntity.getBody();
+            ).getBody();
+            if (response == null) {
+                throw new RestClientException("API changed behavior");
+            }
+            accessTokensMap.put(
+                    user.getUserId(),
+                    response.getAccessToken(),
+                    accessTokenTtl.toMinutes(),
+                    TimeUnit.MINUTES);
+            refreshTokensMap.put(
+                    user.getUserId(),
+                    response.getRefreshToken(),
+                    refreshTokenTtl.toMinutes(),
+                    TimeUnit.MINUTES);
+            return true;
         } catch (RestClientException e) {
-            setStatusCode(HttpStatus.UNAUTHORIZED.value());
-            return null;
+            log.info("Can't authorize user {} timestamp {}", user.getUserId(), Instant.now());
+            return false;
         }
     }
 
-    public RefreshResponse refreshToken(String refreshToken) {
+    public boolean refreshToken(Long userId) {
         RefreshRequest refreshRequest = new RefreshRequest();
-        refreshRequest.setRefreshToken(refreshToken);
+        refreshRequest.setRefreshToken(refreshTokensMap.get(userId));
         try {
-            ResponseEntity<RefreshResponse> responseEntity = restTemplate.exchange(
+            var response = restTemplate.exchange(
                     "/auth/refresh",
                     HttpMethod.POST,
                     new HttpEntity<>(refreshRequest),
                     RefreshResponse.class
-            );
+            ).getBody();
+            if (response == null) {
+                log.info("Incorrect API behavior on refresh");
+                return false;
+            }
+            accessTokensMap.put(
+                    userId,
+                    response.getAccessToken(),
+                    accessTokenTtl.toMinutes(),
+                    TimeUnit.MINUTES);
+            refreshTokensMap.put(
+                    userId,
+                    response.getRefreshToken(),
+                    refreshTokenTtl.toMinutes(),
+                    TimeUnit.MINUTES);
             log.info("Access and refresh token has been updated");
-
-            setStatusCode(responseEntity.getStatusCode().value());
-            return responseEntity.getBody();
+            return true;
         } catch (RestClientException e) {
-            setStatusCode(HttpStatus.UNAUTHORIZED.value());
-            log.warn("Refresh token has been expired");
-            return null;
+            log.warn("Invalid refresh token. userId {} timestamp {}", userId, Instant.now());
+            return false;
         }
+    }
+
+    public BotChange processSignOut(Long messageChatId) {
+        accessTokensMap.remove(messageChatId);
+        refreshTokensMap.remove(messageChatId);
+
+        log.warn("User session has expired");
+        log.info("Access map deleted the user id and token successfully");
+        log.info("Refresh map deleted the user id and token successfully");
+
+        return new BotChange(
+                BotState.BASE,
+                MessagePool.SESSION_EXPIRED + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
+    }
+
+    public String getUserAccessToken(Long userId) {
+        return accessTokensMap.get(userId);
     }
 }
