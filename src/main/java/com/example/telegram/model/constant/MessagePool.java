@@ -19,11 +19,11 @@ public class MessagePool {
             Данные верны! Добро пожаловать, будь как дома\uD83D\uDE0A
             """;
     public static final String MAIN_MENU = """
-            Вот список доступных команд:
-            Ты можешь создать новую задачу с помощью команды /create
-            Если тебя интересуют уже созданные задачи воспользуйся командой /show
-                        
-            Для выхода из аккаунта можешь использовать /signout
+            Доступные команды:
+            /create - создать новую задачу
+            /show - список твоих задач
+            
+            /signout - выход из аккаунта
             """;
     public static final String INPUT_TASK_DATA_MESSAGE = "Введи название новой задачи:";
     public static final String TASK_CREATED_MESSAGE = """

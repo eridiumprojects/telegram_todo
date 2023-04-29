@@ -1,5 +1,6 @@
 package com.example.telegram.model.dto.response;
 
+import com.example.telegram.model.enums.TaskStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -10,4 +11,5 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TaskInfo {
     String data;
+    TaskStatus status;
 }

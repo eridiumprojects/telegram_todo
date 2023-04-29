@@ -3,7 +3,7 @@ server:
 
 tg:
   bot:
-    name: kookacreq_bot
+    name: course_v1_bot
     token: ${BOT_TOKEN}
 
 backend:

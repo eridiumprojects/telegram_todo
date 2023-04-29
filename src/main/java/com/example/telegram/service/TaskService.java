@@ -2,6 +2,7 @@ package com.example.telegram.service;
 
 import com.example.telegram.model.dto.request.CreateTaskRequest;
 import com.example.telegram.model.dto.response.TaskInfo;
+import com.example.telegram.model.enums.TaskStatus;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +16,11 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 @Service
 @Getter
@@ -46,9 +51,25 @@ public class TaskService {
                 return "[]";
             }
 
+            var taskMap = result.stream()
+                    .collect(Collectors.groupingBy(
+                            TaskInfo::getStatus,
+                            Collectors.mapping(TaskInfo::getData, toList())))
+                    .entrySet()
+                    .stream()
+                    .sorted(Comparator.comparingInt(a -> TaskStatus.priorities.get(a.getKey())))
+                    .toList();
+
             var builder = new StringBuilder();
-            for (int i = 1; i < result.size(); ++i) {
-                builder.append(i).append(". ").append(result.get(i-1).getData()).append("\n");
+            int numeration = 1;
+
+            for (var el : taskMap) {
+                builder.append('\n');
+                builder.append("[").append(el.getKey().getStatus()).append("]").append("\n");
+                for (var subEl : el.getValue()) {
+                    builder.append(numeration).append(". ").append(subEl).append("\n");
+                    numeration++;
+                }
             }
 
             return builder.toString();
