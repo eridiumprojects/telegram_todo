@@ -9,7 +9,6 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 public class LoginRequest {
-    private Long userId;
     private String username;
     private String password;
     @JsonIgnore

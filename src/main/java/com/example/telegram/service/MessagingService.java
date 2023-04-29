@@ -60,12 +60,11 @@ public class MessagingService {
 
         return new BotChange(
                 BotState.IN_ACCOUNT_BASE,
-                MessagePool.TASK_CREATED_MESSAGE + "\n\n" + MAIN_MENU);
+                MessagePool.TASK_CREATED_MESSAGE + "\n" + MAIN_MENU);
     }
 
     public BotChange loginUser(long messageChatId, String messageText) {
-        var loginResponse = authService.loginUser(new LoginRequest(
-                messageChatId,
+        var loginResponse = authService.loginUser(messageChatId, new LoginRequest(
                 userNames.get(messageChatId),
                 messageText,
                 UUID.randomUUID()));
@@ -76,12 +75,12 @@ public class MessagingService {
             log.info("Refresh map saved the user id and token successfully");
             return new BotChange(
                     BotState.IN_ACCOUNT_BASE,
-                    MessagePool.SUCCESSFULLY_LOGGED_MESSAGE + "\n\n" + MAIN_MENU);
+                    MessagePool.SUCCESSFULLY_LOGGED_MESSAGE + "\n" + MAIN_MENU);
         } else {
             log.warn("User has bad credentials");
             return new BotChange(
                     BotState.BASE,
-                    MessagePool.INVALID_DATA_MESSAGE + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
+                    MessagePool.INVALID_DATA_MESSAGE + "\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
         }
     }
 

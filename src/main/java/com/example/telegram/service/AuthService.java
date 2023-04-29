@@ -66,7 +66,7 @@ public class AuthService {
         return false;
     }
 
-    public boolean loginUser(LoginRequest user) {
+    public boolean loginUser(Long userId, LoginRequest user) {
         try {
             var response = restTemplate.exchange(
                     "/auth/signin",
@@ -78,18 +78,18 @@ public class AuthService {
                 throw new RestClientException("API changed behavior");
             }
             accessTokensMap.put(
-                    user.getUserId(),
+                    userId,
                     response.getAccessToken(),
                     accessTokenTtl.toMinutes(),
                     TimeUnit.MINUTES);
             refreshTokensMap.put(
-                    user.getUserId(),
+                    userId,
                     response.getRefreshToken(),
                     refreshTokenTtl.toMinutes(),
                     TimeUnit.MINUTES);
             return true;
         } catch (RestClientException e) {
-            log.info("Can't authorize user {} timestamp {}", user.getUserId(), Instant.now());
+            log.info("Can't authorize user {} timestamp {}", userId, Instant.now());
             return false;
         }
     }
@@ -137,7 +137,7 @@ public class AuthService {
         var messageBeginning = forced ? MessagePool.SESSION_EXPIRED : MessagePool.SIGNOUT_MESSAGE;
         return new BotChange(
                 BotState.BASE,
-                messageBeginning + "\n\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
+                messageBeginning + "\n" + LOGIN_IN_ACCOUNT_WITH_MESSAGE);
     }
 
     public String getUserAccessToken(Long userId) {

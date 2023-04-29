@@ -19,7 +19,7 @@ public class CommandService {
     private final TaskService taskService;
 
     public BotChange processComand(Long userId, String message, BotState botState) {
-        var command = ECommand.valueOf(message);
+        var command = ECommand.stringCommands.get(message);
 
         BotChange result = null;
         switch (command) {
@@ -53,7 +53,7 @@ public class CommandService {
         if (result) {
             return new BotChange(
                     BotState.IN_ACCOUNT_BASE,
-                    MessagePool.ALREADY_LOGGED + "\n\n" + MAIN_MENU);
+                    MessagePool.ALREADY_LOGGED + "\n" + MAIN_MENU);
         } else {
             log.info("User is trying to login");
             return new BotChange(
@@ -87,7 +87,7 @@ public class CommandService {
 
         log.info("User has received a task list");
 
-        return new BotChange(BotState.IN_ACCOUNT_BASE, response + "\n\n" + MAIN_MENU);
+        return new BotChange(BotState.IN_ACCOUNT_BASE, response + "\n" + MAIN_MENU);
     }
 
     public BotChange processAskTaksData() {
