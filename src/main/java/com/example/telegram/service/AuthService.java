@@ -21,7 +21,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 import static com.example.telegram.model.constant.MessagePool.LOGIN_IN_ACCOUNT_WITH_MESSAGE;
@@ -89,7 +88,7 @@ public class AuthService {
                     TimeUnit.MINUTES);
             return true;
         } catch (RestClientException e) {
-            log.info("Can't authorize user {} timestamp {}", userId, Instant.now());
+            log.info("Can't authorize user {}", userId);
             return false;
         }
     }
@@ -121,7 +120,7 @@ public class AuthService {
             log.info("Access and refresh token has been updated");
             return true;
         } catch (RestClientException e) {
-            log.warn("Invalid refresh token. userId {} timestamp {}", userId, Instant.now());
+            log.warn("Invalid refresh token. userId {}", userId);
             return false;
         }
     }
