@@ -79,6 +79,7 @@ public class CommandService {
             }
             accessToken = authService.getUserAccessToken(messageChatId);
             response = taskService.getTaskList(accessToken);
+            log.info("refresh success on get task list");
         }
 
         if (response.equals("[]")) {

@@ -53,8 +53,8 @@ public class TaskService {
 
             return builder.toString();
         } catch (RestClientException e) {
-            log.warn("User couldn't get task list. Using default response");
-            return "[]";
+            log.warn("User couldn't get task list. Will try to refresh if didn't");
+            return null;
         }
     }
 
@@ -73,7 +73,7 @@ public class TaskService {
 
             return true;
         } catch (RestClientException e) {
-            log.warn("User couldn't create task.");
+            log.warn("User couldn't create task. Will try to refresh if didn't");
             return false;
         }
     }

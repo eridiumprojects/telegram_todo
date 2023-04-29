@@ -51,6 +51,7 @@ public class MessagingService {
             if (!refreshResponse) {
                 return authService.signOut(messageChatId, true);
             }
+            log.info("refresh success");
 
             accessToken = authService.getUserAccessToken(messageChatId);
             taskService.createTask(accessToken, messageText);
