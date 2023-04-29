@@ -57,7 +57,7 @@ public class MessagingService {
             taskService.createTask(accessToken, messageText);
         }
 
-        log.info("User has been created a task");
+        log.info("User created a task");
 
         return new BotChange(
                 BotState.IN_ACCOUNT_BASE,
