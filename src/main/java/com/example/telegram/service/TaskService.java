@@ -5,7 +5,6 @@ import com.example.telegram.model.dto.response.TaskInfo;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.ParameterizedTypeReference;
@@ -17,7 +16,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @Getter
@@ -48,16 +46,12 @@ public class TaskService {
                 return "[]";
             }
 
-            AtomicInteger numeration = new AtomicInteger(0);
-            var adaptedToUser = result.stream()
-                    .map(TaskInfo::getData)
-                    .map(o -> {
-                        numeration.getAndIncrement();
-                        return numeration + ". " + o + "\n";
-                    })
-                    .toList();
+            var builder = new StringBuilder();
+            for (int i = 1; i < result.size(); ++i) {
+                builder.append(i).append(". ").append(result.get(i-1).getData()).append("\n");
+            }
 
-            return StringUtils.join(adaptedToUser);
+            return builder.toString();
         } catch (RestClientException e) {
             log.warn("User couldn't get task list. Using default response");
             return "[]";
