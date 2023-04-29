@@ -58,13 +58,14 @@ public class TaskService {
                     .entrySet()
                     .stream()
                     .sorted(Comparator.comparingInt(a -> TaskStatus.priorities.get(a.getKey())))
+                    .filter(o -> !o.getValue().isEmpty())
                     .toList();
 
             var builder = new StringBuilder();
             int numeration = 1;
 
             for (var el : taskMap) {
-                builder.append('\n');
+                builder.append("\n");
                 builder.append("[").append(el.getKey().getStatus()).append("]").append("\n");
                 for (var subEl : el.getValue()) {
                     builder.append(numeration).append(". ").append(subEl).append("\n");
