@@ -31,18 +31,14 @@ public class CoreApiClient {
             RestTemplateBuilder restTemplate
     ) {
         this.restTemplate = restTemplate.rootUri(baseApiUrl).build();
-//        this.restTemplate.exchange(
-//                "/auth/signin",
-//                HttpMethod.POST,
-//                new HttpEntity<>(new LoginRequest("boba", "boba", UUID.randomUUID())),
-//                JwtResponse.class);
     }
 
     public JwtResponse postForJwt(LoginRequest loginRequest) {
         var result = post(
                 "/auth/signin",
                 new HttpEntity<>(loginRequest),
-                new ParameterizedTypeReference<JwtResponse>() {});
+                new ParameterizedTypeReference<JwtResponse>() {
+                });
         if (result.getBody() == null) {
             log.warn("API changed behavior");
             throw new RestClientException("API changed behavior");
@@ -54,7 +50,8 @@ public class CoreApiClient {
         var result = post(
                 "/auth/refresh",
                 new HttpEntity<>(refreshRequest),
-                new ParameterizedTypeReference<RefreshResponse>() {});
+                new ParameterizedTypeReference<RefreshResponse>() {
+                });
         if (result.getBody() == null) {
             log.warn("API changed behavior");
             throw new RestClientException("API changed behavior");
@@ -69,7 +66,8 @@ public class CoreApiClient {
         return (List<TaskInfo>) get(
                 "/task/list",
                 new HttpEntity<>(headers),
-                new ParameterizedTypeReference<List<TaskInfo>>() {}).getBody();
+                new ParameterizedTypeReference<List<TaskInfo>>() {
+                }).getBody();
     }
 
     public void postForTaskCreate(String token, String data) {
@@ -80,16 +78,17 @@ public class CoreApiClient {
 
         post("/task/create",
                 requestEntity,
-                new ParameterizedTypeReference<TaskInfo>(){});
+                new ParameterizedTypeReference<TaskInfo>() {
+                });
     }
 
     public ResponseEntity<?> post(String uri, HttpEntity<?> request, ParameterizedTypeReference<?> responseType) {
-         return restTemplate.exchange(
-                 uri,
-                 HttpMethod.POST,
-                 request,
-                 responseType
-         );
+        return restTemplate.exchange(
+                uri,
+                HttpMethod.POST,
+                request,
+                responseType
+        );
     }
 
     public ResponseEntity<?> get(String uri, HttpEntity<?> request, ParameterizedTypeReference<?> responseType) {
