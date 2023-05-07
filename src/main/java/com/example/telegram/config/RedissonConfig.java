@@ -11,18 +11,13 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RedissonConfig {
-    private static String redisUrl(String host, String port) {
-        return "redis://%s:%s".formatted(host, port);
-    }
-
     @Bean
     RedissonClient redissonClient(
             ObjectMapper objectMapper,
-            @Value("${spring.data.redis.host}") String host,
-            @Value("${spring.data.redis.port}") String port
+            @Value("${spring.data.redis.url}") String url
     ) {
         Config config = getCommonConfig(objectMapper);
-        config.useSingleServer().setAddress(redisUrl(host, port));
+        config.useSingleServer().setAddress((url));
 
         return Redisson.create(config);
     }
