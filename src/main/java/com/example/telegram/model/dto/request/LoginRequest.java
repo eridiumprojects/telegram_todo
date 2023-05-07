@@ -1,6 +1,5 @@
 package com.example.telegram.model.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -11,6 +10,5 @@ import java.util.UUID;
 public class LoginRequest {
     private String username;
     private String password;
-    @JsonIgnore
     private UUID deviceToken;
 }

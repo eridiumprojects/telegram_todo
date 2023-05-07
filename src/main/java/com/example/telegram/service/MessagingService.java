@@ -72,8 +72,6 @@ public class MessagingService {
 
         if (loginResponse) {
             log.info("User logged into the account");
-            log.info("Access map saved the user id and token successfully");
-            log.info("Refresh map saved the user id and token successfully");
             return new BotChange(
                     BotState.IN_ACCOUNT_BASE,
                     MessagePool.SUCCESSFULLY_LOGGED_MESSAGE + "\n" + MAIN_MENU);

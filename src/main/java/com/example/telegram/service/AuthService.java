@@ -4,21 +4,16 @@ import com.example.telegram.model.constant.MessagePool;
 import com.example.telegram.model.dto.BotChange;
 import com.example.telegram.model.dto.request.LoginRequest;
 import com.example.telegram.model.dto.request.RefreshRequest;
-import com.example.telegram.model.dto.response.JwtResponse;
-import com.example.telegram.model.dto.response.RefreshResponse;
 import com.example.telegram.model.enums.BotState;
+import com.example.telegram.rest.CoreApiClient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.redisson.api.RMapCache;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -30,22 +25,21 @@ import static com.example.telegram.model.constant.MessagePool.LOGIN_IN_ACCOUNT_W
 @Setter
 @Log4j2
 public class AuthService {
-    private final RestTemplate restTemplate;
     private final Duration accessTokenTtl;
     private final Duration refreshTokenTtl;
     private final RMapCache<Long, String> accessTokensMap;
     private final RMapCache<Long, String> refreshTokensMap;
+    private final CoreApiClient coreApiClient;
 
     public AuthService(
-            RestTemplateBuilder restTemplateBuilder,
-            @Value("${backend.url}") String baseApiUrl,
             @Value("${storage.access-token}") String accessTokenStorage,
             @Value("${storage.refresh-token}") String refreshTokenStorage,
             @Value("${security.ttl.access}") Duration accessTokenTtl,
             @Value("${security.ttl.refresh}") Duration refreshTokenTtl,
-            RedissonClient redissonClient
+            RedissonClient redissonClient,
+            CoreApiClient coreApiClient
     ) {
-        this.restTemplate = restTemplateBuilder.rootUri(baseApiUrl).build();
+        this.coreApiClient = coreApiClient;
 
         this.accessTokensMap = redissonClient.getMapCache(accessTokenStorage);
         this.refreshTokensMap = redissonClient.getMapCache(refreshTokenStorage);
@@ -67,15 +61,7 @@ public class AuthService {
 
     public boolean loginUser(Long userId, LoginRequest user) {
         try {
-            var response = restTemplate.exchange(
-                    "/auth/signin",
-                    HttpMethod.POST,
-                    new HttpEntity<>(user),
-                    JwtResponse.class
-            ).getBody();
-            if (response == null) {
-                throw new RestClientException("API changed behavior");
-            }
+            var response = coreApiClient.postForJwt(user);
             accessTokensMap.put(
                     userId,
                     response.getAccessToken(),
@@ -97,16 +83,7 @@ public class AuthService {
         RefreshRequest refreshRequest = new RefreshRequest();
         refreshRequest.setRefreshToken(refreshTokensMap.get(userId));
         try {
-            var response = restTemplate.exchange(
-                    "/auth/refresh",
-                    HttpMethod.POST,
-                    new HttpEntity<>(refreshRequest),
-                    RefreshResponse.class
-            ).getBody();
-            if (response == null) {
-                log.info("Incorrect API behavior on refresh");
-                return false;
-            }
+            var response = coreApiClient.postForRefresh(refreshRequest);
             accessTokensMap.put(
                     userId,
                     response.getAccessToken(),
@@ -129,9 +106,11 @@ public class AuthService {
         accessTokensMap.remove(messageChatId);
         refreshTokensMap.remove(messageChatId);
 
-        log.warn("User session has expired");
-        log.info("Access map deleted the user id and token successfully");
-        log.info("Refresh map deleted the user id and token successfully");
+        if (forced) {
+            log.warn("User session has expired");
+        }
+        log.debug("Access map deleted the user id and token successfully");
+        log.debug("Refresh map deleted the user id and token successfully");
 
         var messageBeginning = forced ? MessagePool.SESSION_EXPIRED : MessagePool.SIGNOUT_MESSAGE;
         return new BotChange(
